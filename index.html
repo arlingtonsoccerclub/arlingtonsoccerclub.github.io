@@ -389,7 +389,7 @@ function getEval(i) {
 
 function isEvalComplete(i) {
   const e = state.evals[i]; if (!e) return false;
-  if (!e.technical || !e.understanding || !e.attitude || !e.overall || !e.comments || !e.attendance) return false;
+  if (!e.technical || !e.understanding || !e.attitude || !e.overall || !e.attendance) return false;
   if (e.attendance === 'yes' && !e.attendanceDesc.trim()) return false;
   return true;
 }
