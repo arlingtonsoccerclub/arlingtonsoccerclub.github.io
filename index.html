@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ASC Player Evaluation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAFAF7;
+    --surface: #FFFFFF;
+    --text: #1A1A1A;
+    --text-2: #6B6B6B;
+    --text-3: #9A9A95;
+    --border: #E5E5E0;
+    --border-strong: #C8C8C0;
+    --accent: #15803D;
+    --accent-bg: #DCFCE7;
+    --accent-text: #14532D;
+    --warn-bg: #FEF3C7;
+    --warn-text: #92400E;
+    --danger: #B91C1C;
+    --info-bg: #E0F2FE;
+    --info-text: #075985;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 24px 20px 80px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px;
+  }
+  .brand-text { font-weight: 600; font-size: 15px; }
+  .save-status {
+    font-size: 12px; color: var(--text-3);
+    display: flex; align-items: center; gap: 6px;
+    min-height: 18px;
+  }
+  .save-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--text-3);
+  }
+  .save-status.saving .save-dot { background: var(--warn-text); }
+  .save-status.saved .save-dot { background: var(--accent); }
+  .save-status.error .save-dot { background: var(--danger); }
+
+  .stepper {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .step-pill {
+    padding: 6px 12px; border-radius: var(--radius);
+    background: #EFEFEA; color: var(--text-2);
+    font-size: 13px; font-weight: 500;
+    border: 1px solid transparent;
+  }
+  .step-pill.active {
+    background: var(--accent); color: white;
+  }
+  .step-pill.done {
+    background: var(--accent-bg); color: var(--accent-text);
+    cursor: pointer;
+  }
+  .step-pill.done:hover { border-color: var(--accent); }
+
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 18px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .subhead { color: var(--text-2); font-size: 14px; margin: 0 0 24px; }
+
+  .field { margin-bottom: 20px; }
+  .field-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .field-help { font-size: 12px; color: var(--text-2); margin: 0 0 8px; line-height: 1.5; }
+
+  input[type="text"], input[type="email"], textarea {
+    width: 100%; padding: 10px 12px;
+    font-family: inherit; font-size: 16px; line-height: 1.4;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.1);
+  }
+  textarea { resize: vertical; min-height: 72px; }
+
+  .check-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .check-card label {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 14px; cursor: pointer;
+  }
+  .check-card input[type="checkbox"] {
+    margin-top: 3px; width: 16px; height: 16px; flex-shrink: 0;
+    accent-color: var(--accent);
+  }
+
+  .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    padding: 8px 14px; font-family: inherit; font-size: 14px;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer; font-weight: 500;
+    transition: all 0.12s;
+    min-height: 38px;
+  }
+  .pill:hover { border-color: var(--border-strong); }
+  .pill.selected {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+
+  .rating-list { display: flex; flex-direction: column; gap: 6px; }
+  .rating-card {
+    text-align: left; width: 100%;
+    padding: 12px 14px;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer; font-family: inherit;
+    transition: all 0.12s;
+  }
+  .rating-card:hover { border-color: var(--border-strong); }
+  .rating-card.selected {
+    background: var(--accent-bg); border-color: var(--accent);
+  }
+  .rating-card.selected .rating-main { color: var(--accent-text); }
+  .rating-main { font-size: 14px; font-weight: 600; }
+  .rating-desc { font-size: 13px; color: var(--text-2); margin-top: 3px; line-height: 1.5; }
+
+  .char-count { text-align: right; font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+  .roster-grid {
+    display: grid; grid-template-columns: 28px 1fr 1fr 36px;
+    gap: 8px; margin-bottom: 8px; align-items: center;
+  }
+  .roster-grid.header {
+    font-size: 12px; color: var(--text-2); margin-bottom: 6px;
+  }
+  .roster-num { text-align: center; font-size: 13px; color: var(--text-3); font-weight: 500; }
+  .roster-grid input[type="text"] { padding: 8px 10px; font-size: 14px; }
+  .icon-btn {
+    width: 36px; height: 36px; padding: 0;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: var(--radius); cursor: pointer;
+    color: var(--danger); font-size: 18px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+  }
+  .icon-btn:hover:not(:disabled) { background: #FEE2E2; border-color: #FCA5A5; }
+  .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .progress-bar {
+    height: 6px; background: var(--border); border-radius: 3px;
+    overflow: hidden; margin-bottom: 20px;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent);
+    transition: width 0.3s ease;
+  }
+
+  .player-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 10px; margin-bottom: 8px;
+  }
+  .player-counter { font-size: 13px; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .review-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px;
+  }
+  .review-card.incomplete {
+    background: var(--warn-bg);
+    border-color: #FCD34D;
+  }
+  .review-name { font-weight: 600; font-size: 14px; }
+  .review-meta { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .review-card.incomplete .review-meta { color: var(--warn-text); }
+  .team-summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 20px;
+  }
+  .team-summary-label { font-size: 12px; color: var(--text-2); margin-bottom: 4px; }
+
+  button.btn {
+    padding: 10px 16px; font-family: inherit; font-size: 14px; font-weight: 500;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.12s;
+    min-height: 40px;
+  }
+  button.btn:hover:not(:disabled) { border-color: var(--border-strong); }
+  button.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.btn-primary {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+  button.btn-primary:hover:not(:disabled) { background: #166534; border-color: #166534; }
+  button.btn-ghost {
+    background: transparent; border-color: transparent; color: var(--text-2);
+  }
+  button.btn-ghost:hover:not(:disabled) { color: var(--text); background: #EFEFEA; }
+  button.btn-block { width: 100%; padding: 14px; font-size: 15px; font-weight: 600; }
+
+  .nav-bar {
+    display: flex; justify-content: space-between; gap: 10px;
+    margin-top: 24px; padding-top: 20px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .nav-bar .right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .resume-banner {
+    background: var(--info-bg); color: var(--info-text);
+    border: 1px solid #BAE6FD;
+    border-radius: var(--radius);
+    padding: 12px 14px; margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .resume-banner-text { font-size: 13px; }
+  .resume-banner button { font-size: 13px; }
+
+  .submit-result {
+    text-align: center; padding: 32px 20px;
+  }
+  .submit-result-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent-bg); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+    font-size: 28px;
+  }
+  .submit-result.error .submit-result-icon {
+    background: #FEE2E2; color: var(--danger);
+  }
+
+  @media (max-width: 480px) {
+    .page { padding: 16px 14px 60px; }
+    .header { margin-bottom: 16px; }
+    .roster-grid { grid-template-columns: 22px 1fr 1fr 32px; gap: 6px; }
+    .icon-btn { width: 32px; height: 32px; }
+    .nav-bar { flex-direction: column-reverse; }
+    .nav-bar .btn { width: 100%; }
+    .nav-bar .right { width: 100%; flex-direction: column-reverse; }
+    .nav-bar .right .btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="header">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <div class="brand-text">Player evaluation · 2026</div>
+    </div>
+    <div class="save-status" id="save-status"></div>
+  </div>
+
+  <div class="stepper" id="stepper"></div>
+
+  <div id="content"></div>
+
+  <div class="nav-bar" id="nav"></div>
+
+</div>
+
+<script>
+// =============================================================
+// CONFIGURATION
+// =============================================================
+// Replace WEBHOOK_URL below with the URL you get after deploying
+// the Apps Script as a Web App (Deploy > New deployment > Web app)
+const CONFIG = {
+  WEBHOOK_URL: 'https://script.google.com/macros/s/AKfycbw3ZzMFYqYbJ96uDsMF-zEFEhzgp8jC0fnndeJ1iS2rb-nmbXs9Y3fmZp-8OGU10r4T/exec',
+  DRAFT_KEY: 'asc-eval-draft-v1',
+  AUTOSAVE_DEBOUNCE_MS: 400
+};
+
+// =============================================================
+// STATE
+// =============================================================
+const DEFAULT_STATE = () => ({
+  step: 1,
+  team: { email: '', coachLastName: '', confirmed: false, gender: '', grade: '', desc: '', division: '', section: '' },
+  roster: [{firstName: '', lastName: ''}, {firstName: '', lastName: ''}, {firstName: '', lastName: ''}],
+  currentPlayer: 0,
+  evals: {},
+  submittedAt: null
+});
+
+let state = DEFAULT_STATE();
+let submitting = false;
+let submitResult = null; // null | 'success' | {error: '...'}
+
+// =============================================================
+// CONSTANTS
+// =============================================================
+const STEPS = [{n:1,l:'Team info'},{n:2,l:'Roster'},{n:3,l:'Evaluations'},{n:4,l:'Review'}];
+
+const RATING = {
+  technical: [
+    {v:'much_higher',m:'Much higher',d:'Excellent, confident technique; consistently clean execution under pressure and at speed'},
+    {v:'somewhat_higher',m:'Somewhat higher',d:'Strong, reliable technique; executes skills well under moderate pressure'},
+    {v:'about_same',m:'About the same',d:'Competent with core skills; executes basic techniques with some consistency'},
+    {v:'somewhat_lower',m:'Somewhat lower',d:'Inconsistent technique; can perform basic skills but breaks down under light pressure'},
+    {v:'much_lower',m:'Much lower',d:'Struggles with basic ball control; difficulty completing simple passes or actions even without pressure'}
+  ],
+  understanding: [
+    {v:'much_higher',m:'Much higher',d:'Excellent game intelligence; anticipates play, consistently makes smart decisions'},
+    {v:'somewhat_higher',m:'Somewhat higher',d:'Good awareness and positioning; makes quick, effective decisions most of the time'},
+    {v:'about_same',m:'About the same',d:'Understands general positioning; makes reasonable decisions in familiar situations'},
+    {v:'somewhat_lower',m:'Somewhat lower',d:'Basic understanding but inconsistent positioning and slow decision-making'},
+    {v:'much_lower',m:'Much lower',d:'Limited awareness; frequently out of position; unsure of role in game situations'}
+  ],
+  attitude: [
+    {v:'much_higher',m:'Much higher',d:'Outstanding attitude; highly motivated, resilient, and drives own improvement'},
+    {v:'somewhat_higher',m:'Somewhat higher',d:'Strong work ethic; engaged, coachable, and responds well to challenges'},
+    {v:'about_same',m:'About the same',d:'Generally positive; responds to coaching and maintains effort most of the time'},
+    {v:'somewhat_lower',m:'Somewhat lower',d:'Inconsistent effort and focus; limited response to coaching'},
+    {v:'much_lower',m:'Much lower',d:'Low effort; disengaged; struggles to accept feedback or stay focused'}
+  ],
+  overall: [
+    {v:'much_higher',m:'Much higher'},{v:'somewhat_higher',m:'Somewhat higher'},
+    {v:'about_same',m:'About the same'},{v:'somewhat_lower',m:'Somewhat lower'},{v:'much_lower',m:'Much lower'}
+  ]
+};
+
+const LABELS = {
+  gender:{girls:'Girls',boys:'Boys'},
+  grade:{'2':'Grade 2','3':'Grade 3','4':'Grade 4','5':'Grade 5','6':'Grade 6','78':'Grade 7/8'},
+  desc:{a:'A team',b:'B team',c:'C team',ns:'Non-select'},
+  overall:{much_higher:'Much higher',somewhat_higher:'Somewhat higher',about_same:'About the same',somewhat_lower:'Somewhat lower',much_lower:'Much lower'}
+};
+
+// =============================================================
+// UTILITIES
+// =============================================================
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function getEval(i) {
+  if (!state.evals[i]) state.evals[i] = {technical:'',understanding:'',attitude:'',overall:'',comments:'',attendance:'',attendanceDesc:''};
+  return state.evals[i];
+}
+
+function isEvalComplete(i) {
+  const e = state.evals[i]; if (!e) return false;
+  if (!e.technical || !e.understanding || !e.attitude || !e.overall || !e.comments || !e.attendance) return false;
+  if (e.attendance === 'yes' && !e.attendanceDesc.trim()) return false;
+  return true;
+}
+
+function teamValid() {
+  const t = state.team;
+  return t.email.trim() && t.coachLastName.trim() && t.confirmed && t.gender && t.grade && t.desc;
+}
+
+function rosterValid() {
+  return state.roster.length > 0 && state.roster.every(p => p.firstName.trim() && p.lastName.trim());
+}
+
+function missingCount(idx) {
+  const e = state.evals[idx];
+  if (!e) return 6;
+  let n = 0;
+  if (!e.technical) n++;
+  if (!e.understanding) n++;
+  if (!e.attitude) n++;
+  if (!e.overall) n++;
+  if (!e.comments) n++;
+  if (!e.attendance) n++;
+  if (e.attendance === 'yes' && !e.attendanceDesc.trim()) n++;
+  return n;
+}
+
+function hasUserInput() {
+  const t = state.team;
+  if (t.email || t.coachLastName || t.confirmed || t.gender || t.grade || t.desc) return true;
+  if (state.roster.some(p => p.firstName || p.lastName)) return true;
+  if (Object.keys(state.evals).length > 0) return true;
+  return false;
+}
+
+// =============================================================
+// AUTOSAVE
+// =============================================================
+let saveTimer = null;
+let lastSavedAt = null;
+
+function setSaveStatus(kind, text) {
+  const el = document.getElementById('save-status');
+  el.className = 'save-status ' + (kind || '');
+  el.innerHTML = text ? `<span class="save-dot"></span><span>${text}</span>` : '';
+}
+
+function scheduleAutosave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  setSaveStatus('saving', 'Saving…');
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(CONFIG.DRAFT_KEY, JSON.stringify({...state, _savedAt: Date.now()}));
+      lastSavedAt = Date.now();
+      setSaveStatus('saved', 'Saved');
+    } catch (err) {
+      setSaveStatus('error', 'Save failed');
+      console.error('Autosave failed:', err);
+    }
+  }, CONFIG.AUTOSAVE_DEBOUNCE_MS);
+}
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(CONFIG.DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed;
+  } catch (err) {
+    console.error('Failed to load draft:', err);
+    return null;
+  }
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(CONFIG.DRAFT_KEY); } catch {}
+}
+
+// =============================================================
+// SUBMIT
+// =============================================================
+async function submitEvaluations() {
+  if (submitting) return;
+  submitting = true;
+  render();
+
+  const payload = {
+    submittedAt: new Date().toISOString(),
+    team: state.team,
+    roster: state.roster,
+    evaluations: state.evals
+  };
+
+  if (CONFIG.WEBHOOK_URL.startsWith('PASTE_')) {
+    submitting = false;
+    submitResult = {error: 'Webhook URL not configured. Set CONFIG.WEBHOOK_URL in this file.'};
+    render();
+    return;
+  }
+
+  try {
+    const res = await fetch(CONFIG.WEBHOOK_URL, {
+      method: 'POST',
+      mode: 'cors',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+
+    let body = null;
+    try { body = await res.json(); } catch {}
+
+    if (!res.ok || (body && body.ok === false)) {
+      throw new Error((body && body.error) || `Server returned ${res.status}`);
+    }
+
+    submitting = false;
+    submitResult = 'success';
+    state.submittedAt = payload.submittedAt;
+    clearDraft();
+    render();
+
+  } catch (err) {
+    submitting = false;
+    submitResult = {error: err.message || String(err)};
+    render();
+  }
+}
+
+// =============================================================
+// RENDERING
+// =============================================================
+function pillRadio(name, current, options) {
+  return '<div class="pill-group">' + options.map(o => {
+    const sel = current === o.v;
+    return `<button type="button" data-name="${name}" data-value="${o.v}" class="pill${sel?' selected':''}">${o.l}</button>`;
+  }).join('') + '</div>';
+}
+
+function ratingScale(label, sublabel, name, current, options) {
+  return `<div class="field">
+    <label class="field-label" style="margin-bottom: 4px;">${label}</label>
+    ${sublabel ? `<p class="field-help">${sublabel}</p>` : ''}
+    <div class="rating-list">
+      ${options.map(o => {
+        const sel = current === o.v;
+        return `<button type="button" data-name="f-${name}" data-value="${o.v}" class="rating-card${sel?' selected':''}">
+          <div class="rating-main">${o.m}</div>
+          ${o.d ? `<div class="rating-desc">${o.d}</div>` : ''}
+        </button>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function renderStepper() {
+  const el = document.getElementById('stepper');
+  if (submitResult === 'success') { el.innerHTML = ''; return; }
+  el.innerHTML = STEPS.map(s => {
+    const active = s.n === state.step;
+    const done = s.n < state.step;
+    const cls = active ? 'active' : (done ? 'done' : '');
+    return `<div class="step-pill ${cls}" data-jump-step="${done ? s.n : ''}">${s.n}. ${s.l}</div>`;
+  }).join('');
+  document.querySelectorAll('[data-jump-step]').forEach(el => {
+    if (el.dataset.jumpStep) el.onclick = () => { state.step = parseInt(el.dataset.jumpStep); render(); };
+  });
+}
+
+function renderTeamInfo() {
+  const t = state.team;
+  return `
+    <h1>Coach and team info</h1>
+    <p class="subhead">Fill this out once. Then add your roster and evaluate each player.</p>
+
+    ${renderResumeBanner()}
+
+    <div class="field">
+      <label class="field-label">Email</label>
+      <input type="email" id="f-email" value="${escapeHtml(t.email)}" placeholder="coach@example.com" autocomplete="email" />
+    </div>
+
+    <div class="field">
+      <label class="field-label">Head coach's last name</label>
+      <input type="text" id="f-coachLastName" value="${escapeHtml(t.coachLastName)}" autocomplete="family-name" />
+    </div>
+
+    <div class="field check-card">
+      <label>
+        <input type="checkbox" id="f-confirmed" ${t.confirmed?'checked':''} />
+        <span>I confirm all coaches have had input for these evaluations.</span>
+      </label>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Gender category</label>
+      ${pillRadio('f-gender', t.gender, [{v:'girls',l:'Girls'},{v:'boys',l:'Boys'}])}
+    </div>
+
+    <div class="field">
+      <label class="field-label">Current grade level</label>
+      ${pillRadio('f-grade', t.grade, [{v:'2',l:'Grade 2'},{v:'3',l:'Grade 3'},{v:'4',l:'Grade 4'},{v:'5',l:'Grade 5'},{v:'6',l:'Grade 6'},{v:'78',l:'Grade 7/8'}])}
+    </div>
+
+    <div class="field">
+      <label class="field-label">Team description</label>
+      <p class="field-help">All grade 2 teams should choose non-select.</p>
+      ${pillRadio('f-desc', t.desc, [{v:'a',l:'A team'},{v:'b',l:'B team'},{v:'c',l:'C team (7/8 only)'},{v:'ns',l:'Non-select'}])}
+    </div>
+
+    <div class="field">
+      <label class="field-label">Division</label>
+      <p class="field-help">Select teams in grade 3 and 4 and all teams from grade 5 and up.</p>
+      ${pillRadio('f-division', t.division, [{v:'1',l:'1'},{v:'2',l:'2'},{v:'3',l:'3'},{v:'4',l:'4'},{v:'na',l:'Does not apply'}])}
+    </div>
+
+    <div class="field">
+      <label class="field-label">Section</label>
+      <p class="field-help">Select teams in grade 3 and 4 and all teams from grade 5 and up.</p>
+      ${pillRadio('f-section', t.section, [{v:'A',l:'A'},{v:'B',l:'B'},{v:'C',l:'C'},{v:'D',l:'D'},{v:'E',l:'E'},{v:'F',l:'F'},{v:'G',l:'G'},{v:'na',l:'Does not apply'}])}
+    </div>
+  `;
+}
+
+function renderResumeBanner() {
+  if (!window._resumed) return '';
+  return `<div class="resume-banner">
+    <div class="resume-banner-text">Resumed your saved draft from ${formatTime(window._resumed)}.</div>
+    <button type="button" class="btn btn-ghost" id="discard-draft">Start over</button>
+  </div>`;
+}
+
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const today = new Date();
+  const sameDay = d.toDateString() === today.toDateString();
+  const time = d.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+  return sameDay ? time : `${d.toLocaleDateString([], {month: 'short', day: 'numeric'})} at ${time}`;
+}
+
+function renderRoster() {
+  return `
+    <h1>Team roster</h1>
+    <p class="subhead">Add every player you'll evaluate. You can edit this list anytime before submitting.</p>
+    <div id="roster-list"></div>
+    <button type="button" class="btn" id="add-player" style="margin-top: 10px;">+ Add player</button>
+  `;
+}
+
+function renderRosterList() {
+  const el = document.getElementById('roster-list');
+  el.innerHTML = `
+    <div class="roster-grid header">
+      <div></div><div>First name</div><div>Last name</div><div></div>
+    </div>
+  ` + state.roster.map((p, i) => `
+    <div class="roster-grid">
+      <div class="roster-num">${i+1}</div>
+      <input type="text" data-roster-idx="${i}" data-roster-field="firstName" value="${escapeHtml(p.firstName)}" />
+      <input type="text" data-roster-idx="${i}" data-roster-field="lastName" value="${escapeHtml(p.lastName)}" />
+      <button type="button" class="icon-btn" data-remove-idx="${i}" ${state.roster.length <= 1 ? 'disabled' : ''} aria-label="Remove player">×</button>
+    </div>
+  `).join('');
+  attachRosterHandlers();
+}
+
+function attachRosterHandlers() {
+  document.querySelectorAll('[data-roster-idx]').forEach(input => {
+    input.oninput = e => {
+      state.roster[parseInt(e.target.dataset.rosterIdx)][e.target.dataset.rosterField] = e.target.value;
+      scheduleAutosave();
+      renderNav();
+    };
+  });
+  document.querySelectorAll('[data-remove-idx]').forEach(btn => {
+    btn.onclick = () => {
+      const i = parseInt(btn.dataset.removeIdx);
+      state.roster.splice(i, 1);
+      const newEvals = {};
+      Object.keys(state.evals).forEach(k => {
+        const ki = parseInt(k);
+        if (ki < i) newEvals[ki] = state.evals[ki];
+        else if (ki > i) newEvals[ki - 1] = state.evals[ki];
+      });
+      state.evals = newEvals;
+      scheduleAutosave();
+      renderRosterList();
+      renderNav();
+    };
+  });
+}
+
+function renderPlayerEval() {
+  const idx = state.currentPlayer;
+  const player = state.roster[idx];
+  const total = state.roster.length;
+  const e = getEval(idx);
+  const completedThis = state.roster.filter((_, i) => isEvalComplete(i)).length;
+  const pct = Math.round((completedThis / total) * 100);
+
+  return `
+    <div class="player-header">
+      <h1>${escapeHtml(player.firstName)} ${escapeHtml(player.lastName)}</h1>
+      <span class="player-counter">Player ${idx+1} of ${total}</span>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: ${pct}%"></div>
+    </div>
+
+    <p class="subhead">Compare to current teammates and typical opponents. Base on typical performance, not isolated moments. For grade 7/8 teams, compare 7th graders to other 7th graders.</p>
+
+    ${ratingScale('Technical ability', 'Ball control, passing, dribbling, shooting, defending', 'technical', e.technical, RATING.technical)}
+    ${ratingScale('Game understanding', 'Positioning, decision-making, awareness', 'understanding', e.understanding, RATING.understanding)}
+    ${ratingScale('Attitude and effort', 'Work rate, coachability, focus, resilience', 'attitude', e.attitude, RATING.attitude)}
+    ${ratingScale('Overall level of play', null, 'overall', e.overall, RATING.overall)}
+
+    <div class="field">
+      <label class="field-label">Comments</label>
+      <p class="field-help">Strengths, areas for growth, or notes useful for forming teams.</p>
+      <textarea id="f-comments" maxlength="500" rows="3">${escapeHtml(e.comments)}</textarea>
+      <div class="char-count"><span id="comments-count">${e.comments.length}</span>/500</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Attendance issues?</label>
+      <p class="field-help">Select coaches: missed more than 20% of games or more than 50% of practices? Non-select: pattern of unreliable attendance? Excludes illness, injury, religious holidays.</p>
+      ${pillRadio('f-attendance', e.attendance, [{v:'no',l:'No issues'},{v:'yes',l:'Yes, there were issues'}])}
+    </div>
+
+    ${e.attendance === 'yes' ? `
+      <div class="field">
+        <label class="field-label">Briefly describe attendance issues</label>
+        <textarea id="f-attendanceDesc" maxlength="250" rows="2">${escapeHtml(e.attendanceDesc)}</textarea>
+        <div class="char-count"><span id="attendance-count">${e.attendanceDesc.length}</span>/250</div>
+      </div>
+    ` : ''}
+  `;
+}
+
+function renderReview() {
+  const total = state.roster.length;
+  const completed = state.roster.filter((_, i) => isEvalComplete(i)).length;
+  const t = state.team;
+
+  return `
+    <h1>Review and submit</h1>
+    <p class="subhead">${completed} of ${total} evaluations complete.</p>
+
+    <div class="team-summary">
+      <div class="team-summary-label">Team</div>
+      <div>Coach ${escapeHtml(t.coachLastName) || '(missing)'} · ${LABELS.gender[t.gender] || ''} · ${LABELS.grade[t.grade] || ''} · ${LABELS.desc[t.desc] || ''}</div>
+    </div>
+
+    <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Players</div>
+    ${state.roster.map((p, i) => {
+      const done = isEvalComplete(i);
+      const e = state.evals[i] || {};
+      const txt = done ? `Overall: ${LABELS.overall[e.overall]}` : `${missingCount(i)} field${missingCount(i)===1?'':'s'} remaining`;
+      return `
+        <div class="review-card${done ? '' : ' incomplete'}">
+          <div style="min-width: 0; flex: 1;">
+            <div class="review-name">${escapeHtml(p.firstName)} ${escapeHtml(p.lastName)}</div>
+            <div class="review-meta">${txt}</div>
+          </div>
+          <button type="button" class="btn" data-jump-idx="${i}">${done ? 'Edit' : 'Complete'}</button>
+        </div>
+      `;
+    }).join('')}
+
+    ${submitResult && submitResult.error ? `
+      <div style="margin-top: 16px; padding: 12px 14px; background: #FEE2E2; color: #991B1B; border-radius: var(--radius); font-size: 13px;">
+        Submission failed: ${escapeHtml(submitResult.error)}<br>
+        Your draft is safe — you can try again.
+      </div>
+    ` : ''}
+
+    <button type="button" class="btn btn-primary btn-block" id="submit-all" ${completed === total && !submitting ? '' : 'disabled'} style="margin-top: 20px;">
+      ${submitting ? 'Submitting…' : (completed === total ? `Submit ${total} evaluation${total===1?'':'s'}` : `Complete ${total - completed} more to submit`)}
+    </button>
+  `;
+}
+
+function renderSubmitSuccess() {
+  return `
+    <div class="submit-result">
+      <div class="submit-result-icon">✓</div>
+      <h1>Submitted</h1>
+      <p class="subhead">${state.roster.length} evaluation${state.roster.length===1?'':'s'} sent to the committee.</p>
+      <button type="button" class="btn" id="start-new">Start a new team</button>
+    </div>
+  `;
+}
+
+function renderNav() {
+  const nav = document.getElementById('nav');
+  if (submitResult === 'success') { nav.innerHTML = ''; return; }
+  const step = state.step;
+  let left = '<div></div>', right = '<div class="right"></div>';
+
+  if (step === 1) {
+    right = `<div class="right"><button type="button" class="btn btn-primary" id="nav-next" ${teamValid()?'':'disabled'}>Continue to roster →</button></div>`;
+  } else if (step === 2) {
+    left = `<button type="button" class="btn" id="nav-back">← Back</button>`;
+    right = `<div class="right"><button type="button" class="btn btn-primary" id="nav-next" ${rosterValid()?'':'disabled'}>Start evaluations →</button></div>`;
+  } else if (step === 3) {
+    const idx = state.currentPlayer;
+    const total = state.roster.length;
+    left = `<button type="button" class="btn btn-ghost" id="nav-back">← Roster</button>`;
+    let buttons = '';
+    if (idx > 0) buttons += `<button type="button" class="btn" id="prev-player">← Previous</button>`;
+    if (idx < total - 1) {
+      buttons += `<button type="button" class="btn btn-primary" id="next-player">Next →</button>`;
+    } else {
+      buttons += `<button type="button" class="btn btn-primary" id="finish-evals">Review →</button>`;
+    }
+    right = `<div class="right">${buttons}</div>`;
+  } else if (step === 4) {
+    left = `<button type="button" class="btn" id="nav-back">← Back to evaluations</button>`;
+  }
+
+  nav.innerHTML = left + right;
+
+  const back = document.getElementById('nav-back');
+  if (back) back.onclick = () => {
+    if (step === 4) state.step = 3;
+    else if (step === 3) state.step = 2;
+    else state.step--;
+    render();
+  };
+  const nxt = document.getElementById('nav-next');
+  if (nxt) nxt.onclick = () => {
+    if (step === 2) state.currentPlayer = 0;
+    state.step++;
+    render();
+  };
+  const prev = document.getElementById('prev-player');
+  if (prev) prev.onclick = () => { state.currentPlayer--; render(); window.scrollTo(0, 0); };
+  const next = document.getElementById('next-player');
+  if (next) next.onclick = () => { state.currentPlayer++; render(); window.scrollTo(0, 0); };
+  const fin = document.getElementById('finish-evals');
+  if (fin) fin.onclick = () => { state.step = 4; render(); window.scrollTo(0, 0); };
+}
+
+function handleFieldChange(name, value) {
+  if (name === 'f-gender') state.team.gender = value;
+  else if (name === 'f-grade') state.team.grade = value;
+  else if (name === 'f-desc') state.team.desc = value;
+  else if (name === 'f-division') state.team.division = value;
+  else if (name === 'f-section') state.team.section = value;
+  else if (state.step === 3) {
+    const e = getEval(state.currentPlayer);
+    if (name === 'f-technical') e.technical = value;
+    else if (name === 'f-understanding') e.understanding = value;
+    else if (name === 'f-attitude') e.attitude = value;
+    else if (name === 'f-overall') e.overall = value;
+    else if (name === 'f-attendance') e.attendance = value;
+  }
+  scheduleAutosave();
+  render();
+}
+
+function attachStepHandlers() {
+  document.querySelectorAll('.pill, .rating-card').forEach(btn => {
+    btn.onclick = () => handleFieldChange(btn.dataset.name, btn.dataset.value);
+  });
+
+  const discard = document.getElementById('discard-draft');
+  if (discard) discard.onclick = () => {
+    if (confirm('Discard your saved draft and start over?')) {
+      clearDraft();
+      state = DEFAULT_STATE();
+      window._resumed = null;
+      render();
+    }
+  };
+
+  if (state.step === 1) {
+    const email = document.getElementById('f-email');
+    if (email) email.oninput = e => { state.team.email = e.target.value; scheduleAutosave(); renderNav(); };
+    const cln = document.getElementById('f-coachLastName');
+    if (cln) cln.oninput = e => { state.team.coachLastName = e.target.value; scheduleAutosave(); renderNav(); };
+    const conf = document.getElementById('f-confirmed');
+    if (conf) conf.onchange = e => { state.team.confirmed = e.target.checked; scheduleAutosave(); renderNav(); };
+  }
+
+  if (state.step === 2) {
+    renderRosterList();
+    document.getElementById('add-player').onclick = () => {
+      state.roster.push({firstName: '', lastName: ''});
+      scheduleAutosave();
+      renderRosterList();
+      renderNav();
+    };
+  }
+
+  if (state.step === 3) {
+    const ce = getEval(state.currentPlayer);
+    const ct = document.getElementById('f-comments');
+    if (ct) ct.oninput = e => {
+      ce.comments = e.target.value;
+      const cc = document.getElementById('comments-count');
+      if (cc) cc.textContent = e.target.value.length;
+      scheduleAutosave();
+    };
+    const ad = document.getElementById('f-attendanceDesc');
+    if (ad) ad.oninput = e => {
+      ce.attendanceDesc = e.target.value;
+      const ac = document.getElementById('attendance-count');
+      if (ac) ac.textContent = e.target.value.length;
+      scheduleAutosave();
+    };
+  }
+
+  if (state.step === 4) {
+    document.querySelectorAll('[data-jump-idx]').forEach(btn => {
+      btn.onclick = () => {
+        state.currentPlayer = parseInt(btn.dataset.jumpIdx);
+        state.step = 3;
+        submitResult = null;
+        render();
+        window.scrollTo(0, 0);
+      };
+    });
+    const submit = document.getElementById('submit-all');
+    if (submit) submit.onclick = submitEvaluations;
+  }
+
+  const startNew = document.getElementById('start-new');
+  if (startNew) startNew.onclick = () => {
+    state = DEFAULT_STATE();
+    submitResult = null;
+    window._resumed = null;
+    render();
+    window.scrollTo(0, 0);
+  };
+}
+
+function render() {
+  renderStepper();
+  const c = document.getElementById('content');
+  if (submitResult === 'success') {
+    c.innerHTML = renderSubmitSuccess();
+  } else if (state.step === 1) {
+    c.innerHTML = renderTeamInfo();
+  } else if (state.step === 2) {
+    c.innerHTML = renderRoster();
+  } else if (state.step === 3) {
+    c.innerHTML = renderPlayerEval();
+  } else if (state.step === 4) {
+    c.innerHTML = renderReview();
+  }
+  renderNav();
+  attachStepHandlers();
+}
+
+// =============================================================
+// INIT
+// =============================================================
+function init() {
+  const draft = loadDraft();
+  if (draft && draft.team) {
+    state = {...DEFAULT_STATE(), ...draft};
+    if (draft._savedAt) {
+      window._resumed = draft._savedAt;
+      lastSavedAt = draft._savedAt;
+      setSaveStatus('saved', 'Saved');
+    }
+  }
+  render();
+}
+
+init();
+</script>
+
+</body>
+</html>
