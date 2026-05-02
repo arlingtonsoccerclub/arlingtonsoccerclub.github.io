@@ -203,18 +203,42 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 12px 14px;
-    margin-bottom: 8px;
-    display: flex; justify-content: space-between; align-items: center;
-    gap: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
   }
   .review-card.incomplete {
     background: var(--warn-bg);
     border-color: #FCD34D;
   }
-  .review-name { font-weight: 600; font-size: 14px; }
+  .review-card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .review-name { font-weight: 600; font-size: 15px; }
+  .review-num { color: var(--text-3); font-weight: 500; margin-right: 4px; }
   .review-meta { font-size: 12px; color: var(--text-2); margin-top: 2px; }
   .review-card.incomplete .review-meta { color: var(--warn-text); }
+  .review-ratings {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.025);
+    border-radius: var(--radius);
+    font-size: 13px;
+  }
+  .review-card.incomplete .review-ratings { background: rgba(0,0,0,0.04); }
+  .review-rating-row { display: flex; justify-content: space-between; gap: 8px; }
+  .review-rating-key { color: var(--text-2); }
+  .review-rating-val { font-weight: 500; text-align: right; }
+  .review-rating-val.missing { color: var(--text-3); font-weight: 400; font-style: italic; }
+  .review-section { margin-top: 8px; font-size: 13px; }
+  .review-section-label { color: var(--text-2); font-size: 12px; margin-bottom: 2px; }
+  .review-section-content { line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+  .review-section-content.missing { color: var(--text-3); font-style: italic; }
+  @media (max-width: 480px) {
+    .review-ratings { grid-template-columns: 1fr; gap: 4px 0; }
+  }
   .team-summary {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -405,13 +429,12 @@ function rosterValid() {
 
 function missingCount(idx) {
   const e = state.evals[idx];
-  if (!e) return 6;
+  if (!e) return 5;
   let n = 0;
   if (!e.technical) n++;
   if (!e.understanding) n++;
   if (!e.attitude) n++;
   if (!e.overall) n++;
-  if (!e.comments) n++;
   if (!e.attendance) n++;
   if (e.attendance === 'yes' && !e.attendanceDesc.trim()) n++;
   return n;
@@ -709,7 +732,7 @@ function renderPlayerEval() {
     ${ratingScale('Overall level of play', null, 'overall', e.overall, RATING.overall)}
 
     <div class="field">
-      <label class="field-label">Comments</label>
+      <label class="field-label">Comments <span style="color: var(--text-3); font-weight: 400;">(optional)</span></label>
       <p class="field-help">Strengths, areas for growth, or notes useful for forming teams.</p>
       <textarea id="f-comments" maxlength="500" rows="3">${escapeHtml(e.comments)}</textarea>
       <div class="char-count"><span id="comments-count">${e.comments.length}</span>/500</div>
@@ -738,7 +761,7 @@ function renderReview() {
 
   return `
     <h1>Review and submit</h1>
-    <p class="subhead">${completed} of ${total} evaluations complete.</p>
+    <p class="subhead">${completed} of ${total} evaluations complete. Review each player's evaluation below before submitting.</p>
 
     <div class="team-summary">
       <div class="team-summary-label">Team</div>
@@ -746,20 +769,7 @@ function renderReview() {
     </div>
 
     <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Players</div>
-    ${state.roster.map((p, i) => {
-      const done = isEvalComplete(i);
-      const e = state.evals[i] || {};
-      const txt = done ? `Overall: ${LABELS.overall[e.overall]}` : `${missingCount(i)} field${missingCount(i)===1?'':'s'} remaining`;
-      return `
-        <div class="review-card${done ? '' : ' incomplete'}">
-          <div style="min-width: 0; flex: 1;">
-            <div class="review-name">${escapeHtml(p.firstName)} ${escapeHtml(p.lastName)}</div>
-            <div class="review-meta">${txt}</div>
-          </div>
-          <button type="button" class="btn" data-jump-idx="${i}">${done ? 'Edit' : 'Complete'}</button>
-        </div>
-      `;
-    }).join('')}
+    ${state.roster.map((p, i) => renderReviewCard(p, i)).join('')}
 
     ${submitResult && submitResult.error ? `
       <div style="margin-top: 16px; padding: 12px 14px; background: #FEE2E2; color: #991B1B; border-radius: var(--radius); font-size: 13px;">
@@ -771,6 +781,65 @@ function renderReview() {
     <button type="button" class="btn btn-primary btn-block" id="submit-all" ${completed === total && !submitting ? '' : 'disabled'} style="margin-top: 20px;">
       ${submitting ? 'Submitting…' : (completed === total ? `Submit ${total} evaluation${total===1?'':'s'}` : `Complete ${total - completed} more to submit`)}
     </button>
+  `;
+}
+
+function renderReviewCard(p, i) {
+  const done = isEvalComplete(i);
+  const e = state.evals[i] || {};
+
+  function ratingRow(key, val) {
+    const label = LABELS.overall[val];
+    const valHtml = label
+      ? `<span class="review-rating-val">${label}</span>`
+      : `<span class="review-rating-val missing">—</span>`;
+    return `<div class="review-rating-row"><span class="review-rating-key">${key}</span>${valHtml}</div>`;
+  }
+
+  const commentsHtml = e.comments
+    ? `<div class="review-section-content">${escapeHtml(e.comments)}</div>`
+    : `<div class="review-section-content missing">No comments</div>`;
+
+  let attendanceHtml;
+  if (e.attendance === 'no') {
+    attendanceHtml = `<div class="review-section-content">No issues</div>`;
+  } else if (e.attendance === 'yes') {
+    const desc = e.attendanceDesc && e.attendanceDesc.trim()
+      ? escapeHtml(e.attendanceDesc)
+      : `<span class="missing">(details not yet entered)</span>`;
+    attendanceHtml = `<div class="review-section-content">Yes — ${desc}</div>`;
+  } else {
+    attendanceHtml = `<div class="review-section-content missing">Not yet selected</div>`;
+  }
+
+  const headerMeta = done
+    ? ''
+    : `<div class="review-meta">${missingCount(i)} field${missingCount(i)===1?'':'s'} remaining</div>`;
+
+  return `
+    <div class="review-card${done ? '' : ' incomplete'}">
+      <div class="review-card-header">
+        <div style="min-width: 0; flex: 1;">
+          <div class="review-name"><span class="review-num">${i+1}.</span>${escapeHtml(p.firstName)} ${escapeHtml(p.lastName)}</div>
+          ${headerMeta}
+        </div>
+        <button type="button" class="btn" data-jump-idx="${i}">${done ? 'Edit' : 'Complete'}</button>
+      </div>
+      <div class="review-ratings">
+        ${ratingRow('Technical', e.technical)}
+        ${ratingRow('Understanding', e.understanding)}
+        ${ratingRow('Attitude', e.attitude)}
+        ${ratingRow('Overall', e.overall)}
+      </div>
+      <div class="review-section">
+        <div class="review-section-label">Comments</div>
+        ${commentsHtml}
+      </div>
+      <div class="review-section">
+        <div class="review-section-label">Attendance</div>
+        ${attendanceHtml}
+      </div>
+    </div>
   `;
 }
 
