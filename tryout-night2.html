@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ASC Tryout Evaluation — Night 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAFAF7;
+    --surface: #FFFFFF;
+    --text: #1A1A1A;
+    --text-2: #6B6B6B;
+    --text-3: #9A9A95;
+    --border: #E5E5E0;
+    --border-strong: #C8C8C0;
+    --accent: #800000;
+    --accent-bg: #F6E0E0;
+    --accent-text: #4A0000;
+    --warn-bg: #FEF3C7;
+    --warn-text: #92400E;
+    --danger: #B91C1C;
+    --danger-bg: #FEE2E2;
+    --info-bg: #E0F2FE;
+    --info-text: #075985;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 760px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; gap: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand-logo { height: 40px; width: auto; flex-shrink: 0; object-fit: contain; }
+  .brand-text-group { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+  .brand-title { font-weight: 700; font-size: 16px; color: var(--text); letter-spacing: -0.01em; }
+  .brand-subtitle { font-size: 12px; color: var(--text-2); font-weight: 500; }
+  @media (max-width: 480px) {
+    .brand-logo { height: 32px; }
+    .brand-title { font-size: 14px; }
+    .brand-subtitle { font-size: 11px; }
+  }
+
+  .save-status {
+    font-size: 12px; color: var(--text-3);
+    display: flex; align-items: center; gap: 6px; min-height: 18px;
+  }
+  .save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); }
+  .save-status.saving .save-dot { background: var(--warn-text); }
+  .save-status.saved .save-dot { background: var(--accent); }
+  .save-status.error .save-dot { background: var(--danger); }
+
+  .stepper { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+  .step-pill {
+    padding: 6px 12px; border-radius: var(--radius);
+    background: #EFEFEA; color: var(--text-2);
+    font-size: 13px; font-weight: 500; border: 1px solid transparent;
+  }
+  .step-pill.active { background: var(--accent); color: white; }
+  .step-pill.done { background: var(--accent-bg); color: var(--accent-text); cursor: pointer; }
+  .step-pill.done:hover { border-color: var(--accent); }
+
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 18px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .subhead { color: var(--text-2); font-size: 14px; margin: 0 0 24px; }
+
+  .field { margin-bottom: 20px; }
+  .field-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .field-help { font-size: 12px; color: var(--text-2); margin: 0 0 8px; line-height: 1.5; }
+
+  input[type="text"], input[type="email"], input[type="number"], textarea, select {
+    width: 100%; padding: 10px 12px;
+    font-family: inherit; font-size: 16px; line-height: 1.4;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  select { -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath fill='%236B6B6B' d='M6 8L0 0h12z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat; background-position: right 12px center;
+    padding-right: 32px;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.12);
+  }
+  textarea { resize: vertical; min-height: 60px; }
+
+  .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    padding: 8px 14px; font-family: inherit; font-size: 14px;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer; font-weight: 500;
+    transition: all 0.12s; min-height: 38px;
+  }
+  .pill:hover { border-color: var(--border-strong); }
+  .pill.selected { background: var(--accent); color: white; border-color: var(--accent); }
+
+  .rubric-card {
+    background: var(--info-bg); color: var(--info-text);
+    border: 1px solid #BAE6FD;
+    border-radius: var(--radius);
+    padding: 12px 14px; margin-bottom: 20px;
+    font-size: 13px; line-height: 1.6;
+  }
+  .rubric-card strong { font-weight: 600; }
+
+  .rating-pill-group { display: flex; flex-wrap: wrap; gap: 4px; }
+  .rating-pill {
+    flex: 1; min-width: 56px; padding: 10px 6px;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer; transition: all 0.12s;
+    font-variant-numeric: tabular-nums;
+  }
+  .rating-pill:hover { border-color: var(--border-strong); }
+  .rating-pill.selected { background: var(--accent); color: white; border-color: var(--accent); }
+
+  /* Table view for desktop, card view as fallback for mobile (< 700px). */
+  .players-table-wrap {
+    margin-bottom: 12px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); overflow: hidden;
+  }
+  .players-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    table-layout: fixed;
+  }
+  .players-table thead th {
+    text-align: left; padding: 10px 8px;
+    font-weight: 600; font-size: 12px; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.4px;
+    border-bottom: 1px solid var(--border);
+    background: #FAFAF7;
+    position: sticky; top: 0; z-index: 1;
+  }
+  .players-table tbody td { padding: 6px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .players-table tbody tr:last-child td { border-bottom: 0; }
+  .players-table tbody tr.duplicate { background: var(--danger-bg); }
+  .players-table tbody tr.complete { background: rgba(220, 252, 231, 0.4); }
+  .players-table input[type="text"], .players-table select {
+    width: 100%; padding: 7px 8px; font-size: 13px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface); font-family: inherit;
+  }
+  .players-table input[type="text"]:focus,
+  .players-table select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(128, 0, 0, 0.12);
+  }
+  .players-table .row-num {
+    color: var(--text-3); font-size: 12px; font-weight: 500;
+    text-align: center; padding: 12px 4px;
+  }
+  .players-table .pinnie-cell input {
+    font-variant-numeric: tabular-nums; font-weight: 500;
+  }
+  .players-table tr.duplicate .pinnie-cell input {
+    border-color: var(--danger);
+  }
+  .duplicate-msg-inline {
+    font-size: 11px; color: var(--danger); margin-top: 2px; font-weight: 500;
+  }
+  .players-table .icon-btn {
+    width: 28px; height: 28px; padding: 0;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; cursor: pointer; margin: 5px auto 0;
+    color: var(--danger); font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+  }
+  .players-table .icon-btn:hover:not(:disabled) {
+    background: var(--danger-bg); border-color: #FCA5A5;
+  }
+  .players-table .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* Column widths. Adjusts when team column is shown (night 2). */
+  .players-table col.col-num     { width: 36px; }
+  .players-table col.col-pinnie  { width: 14%; }
+  .players-table col.col-rating  { width: 13%; }
+  .players-table col.col-team    { width: 14%; }
+  .players-table col.col-notes   { width: auto; }
+  .players-table col.col-remove  { width: 40px; }
+
+  /* Card-fallback styles below — only used on narrow viewports. */
+  .player-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px; margin-bottom: 14px;
+    transition: border-color 0.15s;
+  }
+  .player-card.duplicate {
+    border-color: var(--danger); background: var(--danger-bg);
+  }
+  .player-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 14px;
+  }
+  .player-card-title { font-size: 15px; font-weight: 600; color: var(--text-2); }
+  .player-card-title.complete { color: var(--accent-text); }
+  .player-card-actions { display: flex; gap: 6px; }
+
+  .pinnie-row {
+    display: grid; grid-template-columns: 100px 1fr; gap: 12px;
+    margin-bottom: 14px; align-items: center;
+  }
+  .pinnie-row label { font-size: 13px; font-weight: 500; }
+  .pinnie-input { font-variant-numeric: tabular-nums; }
+  .duplicate-msg {
+    font-size: 12px; color: var(--danger); margin-top: 4px; font-weight: 500;
+  }
+
+  .rating-grid {
+    display: grid; gap: 14px; margin-bottom: 12px;
+  }
+  .rating-block-label { font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .rating-block-help { font-size: 12px; color: var(--text-2); margin: 0 0 8px; }
+
+  /* Show table on desktop, hide cards. Below 700px, swap. */
+  .players-cards { display: none; }
+  @media (max-width: 700px) {
+    .players-table-wrap { display: none; }
+    .players-cards { display: block; }
+  }
+
+  .icon-btn {
+    width: 32px; height: 32px; padding: 0;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: var(--radius); cursor: pointer;
+    color: var(--danger); font-size: 16px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+  }
+  .icon-btn:hover:not(:disabled) { background: var(--danger-bg); border-color: #FCA5A5; }
+  .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  button.btn {
+    padding: 10px 16px; font-family: inherit; font-size: 14px; font-weight: 500;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer; transition: all 0.12s; min-height: 40px;
+  }
+  button.btn:hover:not(:disabled) { border-color: var(--border-strong); }
+  button.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+  button.btn-primary:hover:not(:disabled) { background: #660000; border-color: #660000; }
+  button.btn-ghost { background: transparent; border-color: transparent; color: var(--text-2); }
+  button.btn-ghost:hover:not(:disabled) { color: var(--text); background: #EFEFEA; }
+  button.btn-block { width: 100%; padding: 14px; font-size: 15px; font-weight: 600; }
+
+  .add-player-btn {
+    width: 100%; padding: 14px; margin-top: 8px;
+    background: var(--surface); color: var(--accent);
+    border: 1px dashed var(--accent); border-radius: var(--radius-lg);
+    cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 500;
+  }
+  .add-player-btn:hover { background: var(--accent-bg); }
+
+  .nav-bar {
+    display: flex; justify-content: space-between; gap: 10px;
+    margin-top: 24px; padding-top: 20px;
+    border-top: 1px solid var(--border); flex-wrap: wrap;
+  }
+  .nav-bar .right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .resume-banner {
+    background: var(--info-bg); color: var(--info-text);
+    border: 1px solid #BAE6FD;
+    border-radius: var(--radius);
+    padding: 12px 14px; margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; flex-wrap: wrap;
+  }
+
+  /* Review step: table on desktop, card fallback on narrow screens. */
+  .review-table-wrap {
+    margin-bottom: 12px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); overflow: hidden;
+  }
+  .review-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    table-layout: fixed;
+  }
+  .review-table thead th {
+    text-align: left; padding: 10px 10px;
+    font-weight: 600; font-size: 12px; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.4px;
+    border-bottom: 1px solid var(--border);
+    background: #FAFAF7;
+  }
+  .review-table th.numeric, .review-table td.numeric { text-align: center; }
+  .review-table tbody td {
+    padding: 10px; border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .review-table tbody tr:last-child td { border-bottom: 0; }
+  .review-table .pinnie-badge {
+    display: inline-block; background: var(--accent); color: white;
+    padding: 3px 10px; border-radius: 6px; font-weight: 700;
+    font-size: 13px; font-variant-numeric: tabular-nums;
+    min-width: 32px; text-align: center;
+  }
+  .review-table .rating-val {
+    font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  .review-table .rating-val.missing { color: var(--text-3); font-weight: 400; }
+  .review-table .notes-cell {
+    white-space: pre-wrap; word-wrap: break-word; line-height: 1.5;
+    color: var(--text);
+  }
+  .review-table .notes-cell.empty { color: var(--text-3); font-style: italic; }
+  .review-table .edit-btn {
+    padding: 4px 10px; font-size: 12px; min-height: 0;
+  }
+  .review-table col.col-num     { width: 36px; }
+  .review-table col.col-pinnie  { width: 70px; }
+  .review-table col.col-rating  { width: 80px; }
+  .review-table col.col-team    { width: 90px; }
+  .review-table col.col-notes   { width: auto; }
+  .review-table col.col-edit    { width: 56px; }
+
+  /* Card fallback (mobile) — same look as before. */
+  .review-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+  }
+  .review-pinnie {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 10px;
+  }
+  .review-pinnie-num {
+    background: var(--accent); color: white;
+    padding: 4px 12px; border-radius: var(--radius); font-weight: 700;
+    font-size: 14px; font-variant-numeric: tabular-nums;
+  }
+  .review-ratings {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px;
+    padding: 10px 12px; background: rgba(0,0,0,0.025);
+    border-radius: var(--radius); font-size: 13px; margin-bottom: 8px;
+  }
+  .review-rating-row { display: flex; justify-content: space-between; }
+  .review-rating-key { color: var(--text-2); }
+  .review-rating-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .review-notes-label { color: var(--text-2); font-size: 12px; margin-bottom: 2px; }
+  .review-notes { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+  .review-notes.empty { color: var(--text-3); font-style: italic; }
+
+  .review-cards { display: none; }
+  @media (max-width: 700px) {
+    .review-table-wrap { display: none; }
+    .review-cards { display: block; }
+  }
+
+  .submit-result { text-align: center; padding: 32px 20px; }
+  .submit-result-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent-bg); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-bottom: 16px; font-size: 28px;
+  }
+
+  @media (max-width: 480px) {
+    .page { padding: 16px 14px 60px; }
+    .nav-bar { flex-direction: column-reverse; }
+    .nav-bar .btn { width: 100%; }
+    .nav-bar .right { width: 100%; flex-direction: column-reverse; }
+    .nav-bar .right .btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="header">
+    <div class="brand">
+      <img class="brand-logo" src="asc-logo.png" alt="Arlington Soccer Club" onerror="this.style.display='none'" />
+      <div class="brand-text-group">
+        <div class="brand-title">Arlington Soccer Club</div>
+        <div class="brand-subtitle" id="brand-subtitle">Tryout evaluation · Night 2</div>
+      </div>
+    </div>
+    <div class="save-status" id="save-status"></div>
+  </div>
+
+  <div class="stepper" id="stepper"></div>
+
+  <div id="content"></div>
+
+  <div class="nav-bar" id="nav"></div>
+
+</div>
+
+<script>
+// =============================================================
+// CONFIGURATION — flip these two values for the Night 2 file.
+// =============================================================
+const NIGHT = 2;            // 1 or 2
+const SHOW_TEAM_FIELD = true;   // true on night 2 only
+
+const CONFIG = {
+  WEBHOOK_URL: 'PASTE_YOUR_TRYOUT_APPS_SCRIPT_WEB_APP_URL_HERE',
+  DRAFT_KEY: 'asc-tryout-draft-night' + NIGHT + '-v1',
+  AUTOSAVE_DEBOUNCE_MS: 400
+};
+
+// =============================================================
+// STATE
+// =============================================================
+const DEFAULT_STATE = () => ({
+  step: 1,
+  evaluator: { name: '', email: '', grade: '' },
+  players: [emptyPlayer()],
+  submittedAt: null
+});
+
+function emptyPlayer() {
+  return {
+    pinnie: '',
+    overall: '',
+    technical: '',
+    understanding: '',
+    notes: '',
+    team: ''   // night 2 only
+  };
+}
+
+let state = DEFAULT_STATE();
+let submitting = false;
+let submitResult = null;
+
+// =============================================================
+// RUBRIC SCALES
+// Standard grades: 1, 1.5, 2, 2.5, 3
+// Grade 7/8: adds 3.5, 4
+// Both share the same numeric meaning; grade 7/8 just extends downward.
+// =============================================================
+const SCALE_STANDARD = ['1', '1.5', '2', '2.5', '3'];
+const SCALE_78       = ['1', '1.5', '2', '2.5', '3', '3.5', '4'];
+
+function scaleForGrade(grade) {
+  return grade === '78' ? SCALE_78 : SCALE_STANDARD;
+}
+
+// =============================================================
+// LABEL TABLES
+// =============================================================
+const STEPS = [
+  { n: 1, l: 'Evaluator' },
+  { n: 2, l: 'Players' },
+  { n: 3, l: 'Review' }
+];
+
+const GRADE_LABELS = {
+  '2': 'Grade 2', '3': 'Grade 3', '4': 'Grade 4',
+  '5': 'Grade 5', '6': 'Grade 6', '78': 'Grade 7/8'
+};
+
+const TEAM_OPTIONS = ['A', 'A/B', 'B', 'B/C', 'C', 'Non-Select'];
+
+// =============================================================
+// UTILITIES
+// =============================================================
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function evaluatorValid() {
+  const e = state.evaluator;
+  return e.name.trim() && e.email.trim() && e.grade;
+}
+
+function isPlayerComplete(p) {
+  if (!p.pinnie || !String(p.pinnie).trim()) return false;
+  if (!p.overall || !p.technical || !p.understanding) return false;
+  if (SHOW_TEAM_FIELD && !p.team) return false;
+  return true;
+}
+
+// Returns a Set of pinnie values that appear more than once (normalized).
+function findDuplicatePinnies() {
+  const counts = {};
+  state.players.forEach(p => {
+    const k = String(p.pinnie || '').trim();
+    if (!k) return;
+    counts[k] = (counts[k] || 0) + 1;
+  });
+  const dups = new Set();
+  Object.keys(counts).forEach(k => { if (counts[k] > 1) dups.add(k); });
+  return dups;
+}
+
+function allPlayersValid() {
+  if (state.players.length === 0) return false;
+  if (findDuplicatePinnies().size > 0) return false;
+  return state.players.every(isPlayerComplete);
+}
+
+// =============================================================
+// KEYBOARD NAVIGATION (table view)
+// =============================================================
+// Field order traversed by Enter when advancing within a row.
+// Team is included only on Night 2 (SHOW_TEAM_FIELD).
+function rowFieldOrder() {
+  return SHOW_TEAM_FIELD
+    ? ['pinnie', 'overall', 'technical', 'understanding', 'team', 'notes']
+    : ['pinnie', 'overall', 'technical', 'understanding', 'notes'];
+}
+
+// Focus a field on the given row. After a re-render the DOM nodes are
+// fresh, so we query by data attribute. Notes is optional, so it's never
+// considered "empty" for the purpose of advancing.
+function focusField(rowIdx, field) {
+  const sel = `[data-player-idx="${rowIdx}"][data-player-field="${field}"]`;
+  // Prefer the table view input; fall back to the card view if hidden.
+  const els = document.querySelectorAll(sel);
+  if (els.length === 0) return false;
+  // The first match is usually the table version (it's rendered first
+  // in the DOM). If the table is display:none on mobile, getBoundingClientRect
+  // returns zero-width — focus the visible one instead.
+  for (const el of els) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      el.focus();
+      if (el.select) try { el.select(); } catch (e) {}
+      return true;
+    }
+  }
+  // No visible match — focus the first one anyway as a fallback.
+  els[0].focus();
+  return true;
+}
+
+function focusPinnie(rowIdx) {
+  return focusField(rowIdx, 'pinnie');
+}
+
+// Required fields for "row complete enough to advance to next row".
+// Notes is optional and pinnies-with-duplicates don't count as complete.
+function rowReadyForNext(idx) {
+  const p = state.players[idx];
+  if (!p) return false;
+  const pinnieKey = String(p.pinnie || '').trim();
+  if (!pinnieKey) return false;
+  if (!p.overall || !p.technical || !p.understanding) return false;
+  if (SHOW_TEAM_FIELD && !p.team) return false;
+  // Don't auto-advance off a row with a duplicate pinnie — force the user
+  // to fix it before moving on.
+  if (findDuplicatePinnies().has(pinnieKey)) return false;
+  return true;
+}
+
+// Called when Enter is pressed inside any cell on row `idx`. Decides where
+// focus should go next: the next empty required field in this row, or the
+// next row's pinnie (creating a new row if needed).
+function handlePlayerEnter(idx) {
+  const p = state.players[idx];
+  const order = rowFieldOrder();
+  // Find the first empty *required* field in this row.
+  for (const f of order) {
+    if (f === 'notes') continue; // optional
+    if (!p[f] || (f === 'pinnie' && !String(p[f]).trim())) {
+      focusField(idx, f);
+      return;
+    }
+  }
+  // All required fields filled. If the pinnie is a duplicate, focus it
+  // so the evaluator can fix it before moving on.
+  const dupes = findDuplicatePinnies();
+  if (dupes.has(String(p.pinnie || '').trim())) {
+    focusField(idx, 'pinnie');
+    return;
+  }
+  // Move to the next row, creating one if needed.
+  if (idx === state.players.length - 1) {
+    state.players.push(emptyPlayer());
+    scheduleAutosave();
+    render();
+    requestAnimationFrame(() => focusPinnie(idx + 1));
+  } else {
+    focusPinnie(idx + 1);
+  }
+}
+
+// =============================================================
+// SURGICAL DOM UPDATES
+// =============================================================
+// These update the table view in response to typing without destroying
+// any input elements — focus stays put even when state changes.
+
+// Update duplicate highlighting on every row. Toggles the .duplicate
+// class on the <tr> and the inline "Duplicate" message under the pinnie.
+function updateDuplicateMarkers() {
+  const dupes = findDuplicatePinnies();
+  document.querySelectorAll('.players-table tbody tr').forEach((tr, i) => {
+    const p = state.players[i];
+    if (!p) return;
+    const pinnieKey = String(p.pinnie || '').trim();
+    const isDup = !!(pinnieKey && dupes.has(pinnieKey));
+    tr.classList.toggle('duplicate', isDup);
+
+    const pinnieCell = tr.querySelector('.pinnie-cell');
+    if (pinnieCell) {
+      let msg = pinnieCell.querySelector('.duplicate-msg-inline');
+      if (isDup && !msg) {
+        msg = document.createElement('div');
+        msg.className = 'duplicate-msg-inline';
+        msg.textContent = 'Duplicate';
+        pinnieCell.appendChild(msg);
+      } else if (!isDup && msg) {
+        msg.remove();
+      }
+    }
+  });
+  // Card view (mobile fallback): same idea, simpler structure.
+  document.querySelectorAll('.players-cards .player-card').forEach((card, i) => {
+    const p = state.players[i];
+    if (!p) return;
+    const pinnieKey = String(p.pinnie || '').trim();
+    const isDup = !!(pinnieKey && dupes.has(pinnieKey));
+    card.classList.toggle('duplicate', isDup);
+    const wrap = card.querySelector('.pinnie-row > div:nth-child(2)');
+    if (wrap) {
+      let msg = wrap.querySelector('.duplicate-msg');
+      if (isDup && !msg) {
+        msg = document.createElement('div');
+        msg.className = 'duplicate-msg';
+        msg.textContent = 'Duplicate pinnie # — must be unique';
+        wrap.appendChild(msg);
+      } else if (!isDup && msg) {
+        msg.remove();
+      }
+    }
+  });
+}
+
+// Toggle the .complete tint on a single row (table view) plus the title
+// checkmark in card view, without rebuilding any input.
+function updateRowState(idx) {
+  const p = state.players[idx];
+  if (!p) return;
+  const dupes = findDuplicatePinnies();
+  const pinnieKey = String(p.pinnie || '').trim();
+  const isDup = !!(pinnieKey && dupes.has(pinnieKey));
+  const isComplete = isPlayerComplete(p) && !isDup;
+
+  const tr = document.querySelectorAll('.players-table tbody tr')[idx];
+  if (tr) tr.classList.toggle('complete', isComplete);
+
+  const card = document.querySelectorAll('.players-cards .player-card')[idx];
+  if (card) {
+    const title = card.querySelector('.player-card-title');
+    if (title) {
+      title.classList.toggle('complete', isComplete);
+      const baseText = 'Player ' + (idx + 1);
+      title.textContent = isComplete ? baseText + ' \u2713' : baseText;
+    }
+  }
+}
+
+// Update the "X added · Y complete" subhead without re-rendering.
+function updateCompletionCounter() {
+  const subhead = document.querySelector('h1 + .subhead');
+  if (!subhead) return;
+  const grade = state.evaluator.grade;
+  const completedCount = state.players.filter(isPlayerComplete).length;
+  subhead.textContent =
+    (GRADE_LABELS[grade] || '') + ' · ' +
+    state.players.length + ' player' + (state.players.length === 1 ? '' : 's') + ' added · ' +
+    completedCount + ' complete';
+}
+
+// =============================================================
+// AUTOSAVE
+// =============================================================
+let saveTimer = null;
+function setSaveStatus(kind, text) {
+  const el = document.getElementById('save-status');
+  el.className = 'save-status ' + (kind || '');
+  el.innerHTML = text ? `<span class="save-dot"></span><span>${text}</span>` : '';
+}
+
+function scheduleAutosave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  setSaveStatus('saving', 'Saving…');
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(CONFIG.DRAFT_KEY, JSON.stringify({...state, _savedAt: Date.now()}));
+      setSaveStatus('saved', 'Saved');
+    } catch (err) {
+      setSaveStatus('error', 'Save failed');
+    }
+  }, CONFIG.AUTOSAVE_DEBOUNCE_MS);
+}
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(CONFIG.DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) { return null; }
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(CONFIG.DRAFT_KEY); } catch (e) {}
+}
+
+// =============================================================
+// SUBMIT
+// =============================================================
+async function submitEvaluations() {
+  if (submitting) return;
+  if (!allPlayersValid()) return;
+  submitting = true;
+  render();
+
+  const payload = {
+    night: NIGHT,
+    submittedAt: new Date().toISOString(),
+    evaluator: state.evaluator,
+    players: state.players
+  };
+
+  if (CONFIG.WEBHOOK_URL.startsWith('PASTE_')) {
+    submitting = false;
+    submitResult = { error: 'Webhook URL not configured.' };
+    render();
+    return;
+  }
+
+  try {
+    const res = await fetch(CONFIG.WEBHOOK_URL, {
+      method: 'POST', mode: 'cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload), redirect: 'follow'
+    });
+    let body = null;
+    try { body = await res.json(); } catch (e) {}
+    if (!res.ok || (body && body.ok === false)) {
+      throw new Error((body && body.error) || `Server returned ${res.status}`);
+    }
+    submitting = false;
+    submitResult = 'success';
+    state.submittedAt = payload.submittedAt;
+    clearDraft();
+    render();
+  } catch (err) {
+    submitting = false;
+    submitResult = { error: err.message || String(err) };
+    render();
+  }
+}
+
+// =============================================================
+// RENDERING
+// =============================================================
+function pillRadio(name, current, options) {
+  return '<div class="pill-group">' + options.map(o => {
+    const sel = current === o.v;
+    return `<button type="button" data-name="${name}" data-value="${o.v}" class="pill${sel?' selected':''}">${o.l}</button>`;
+  }).join('') + '</div>';
+}
+
+function ratingPills(name, current, scale) {
+  return '<div class="rating-pill-group">' + scale.map(v => {
+    const sel = String(current) === v;
+    return `<button type="button" data-rating-name="${name}" data-rating-value="${v}" class="rating-pill${sel?' selected':''}">${v}</button>`;
+  }).join('') + '</div>';
+}
+
+function renderStepper() {
+  const el = document.getElementById('stepper');
+  if (submitResult === 'success') { el.innerHTML = ''; return; }
+  el.innerHTML = STEPS.map(s => {
+    const active = s.n === state.step;
+    const done = s.n < state.step;
+    const cls = active ? 'active' : (done ? 'done' : '');
+    return `<div class="step-pill ${cls}" data-jump-step="${done ? s.n : ''}">${s.n}. ${s.l}</div>`;
+  }).join('');
+  document.querySelectorAll('[data-jump-step]').forEach(el => {
+    if (el.dataset.jumpStep) el.onclick = () => { state.step = parseInt(el.dataset.jumpStep); render(); };
+  });
+}
+
+function renderEvaluator() {
+  const e = state.evaluator;
+  return `
+    <h1>Evaluator info</h1>
+    <p class="subhead">Enter your details once. You'll add player evaluations on the next step.</p>
+    ${renderResumeBanner()}
+
+    <div class="field">
+      <label class="field-label">Your name</label>
+      <input type="text" id="f-name" value="${escapeHtml(e.name)}" autocomplete="name" />
+    </div>
+
+    <div class="field">
+      <label class="field-label">Email</label>
+      <input type="email" id="f-email" value="${escapeHtml(e.email)}" placeholder="evaluator@example.com" autocomplete="email" />
+    </div>
+
+    <div class="field">
+      <label class="field-label">Grade level</label>
+      <p class="field-help">Which grade are you evaluating tonight?</p>
+      ${pillRadio('f-grade', e.grade, [
+        {v:'2',l:'Grade 2'},{v:'3',l:'Grade 3'},{v:'4',l:'Grade 4'},
+        {v:'5',l:'Grade 5'},{v:'6',l:'Grade 6'},{v:'78',l:'Grade 7/8'}
+      ])}
+    </div>
+  `;
+}
+
+function renderResumeBanner() {
+  if (!window._resumed) return '';
+  return `<div class="resume-banner">
+    <div>Resumed your saved draft.</div>
+    <button type="button" class="btn btn-ghost" id="discard-draft">Start over</button>
+  </div>`;
+}
+
+function rubricCardHtml(grade) {
+  if (grade === '78') {
+    return `<div class="rubric-card">
+      <strong>Grade 7/8 rubric:</strong>
+      1 = Much higher / A team ·
+      1.5 = Slightly higher / Bubble A/B ·
+      2 = About the same / B team ·
+      2.5 = Slightly lower / Bubble B/Rec ·
+      3 = Much lower / C ·
+      3.5 = Bubble C/Rec ·
+      4 = Rec
+    </div>`;
+  }
+  return `<div class="rubric-card">
+    <strong>Rubric:</strong>
+    1 = Much higher / A team ·
+    1.5 = Slightly higher / Bubble A/B ·
+    2 = About the same / B team ·
+    2.5 = Slightly lower / Bubble B/Rec ·
+    3 = Much lower / Rec
+  </div>`;
+}
+
+function renderPlayers() {
+  const grade = state.evaluator.grade;
+  const scale = scaleForGrade(grade);
+  const dupes = findDuplicatePinnies();
+  const completedCount = state.players.filter(isPlayerComplete).length;
+
+  return `
+    <h1>Player evaluations</h1>
+    <p class="subhead">${GRADE_LABELS[grade] || ''} · ${state.players.length} player${state.players.length===1?'':'s'} added · ${completedCount} complete</p>
+
+    ${rubricCardHtml(grade)}
+
+    <!-- Desktop: compact table. Mobile (<=700px): card fallback. -->
+    <div class="players-table-wrap">
+      <table class="players-table">
+        <colgroup>
+          <col class="col-num" />
+          <col class="col-pinnie" />
+          <col class="col-rating" />
+          <col class="col-rating" />
+          <col class="col-rating" />
+          ${SHOW_TEAM_FIELD ? '<col class="col-team" />' : ''}
+          <col class="col-notes" />
+          <col class="col-remove" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Pinnie #</th>
+            <th>Overall</th>
+            <th>Technical</th>
+            <th>Understanding</th>
+            ${SHOW_TEAM_FIELD ? '<th>Team</th>' : ''}
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${state.players.map((p, i) => playerRowHtml(p, i, scale, dupes)).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="players-cards">
+      ${state.players.map((p, i) => playerCardHtml(p, i, scale, dupes)).join('')}
+    </div>
+
+    <button type="button" class="add-player-btn" id="add-player">+ Add another player</button>
+  `;
+}
+
+function ratingSelect(field, idx, current, scale) {
+  return `<select data-player-idx="${idx}" data-player-field="${field}">
+    <option value="">—</option>
+    ${scale.map(v => `<option value="${v}"${String(current)===v?' selected':''}>${v}</option>`).join('')}
+  </select>`;
+}
+
+function teamSelect(idx, current) {
+  return `<select data-player-idx="${idx}" data-player-field="team">
+    <option value="">—</option>
+    ${TEAM_OPTIONS.map(t => `<option value="${escapeHtml(t)}"${current===t?' selected':''}>${escapeHtml(t)}</option>`).join('')}
+  </select>`;
+}
+
+function playerRowHtml(p, i, scale, dupes) {
+  const complete = isPlayerComplete(p);
+  const pinnieKey = String(p.pinnie || '').trim();
+  const isDup = !!(pinnieKey && dupes.has(pinnieKey));
+  const cls = isDup ? 'duplicate' : (complete ? 'complete' : '');
+
+  return `
+    <tr class="${cls}">
+      <td class="row-num">${i + 1}</td>
+      <td class="pinnie-cell">
+        <input type="text" inputmode="numeric"
+               data-player-idx="${i}" data-player-field="pinnie"
+               value="${escapeHtml(p.pinnie)}" placeholder="#" />
+        ${isDup ? '<div class="duplicate-msg-inline">Duplicate</div>' : ''}
+      </td>
+      <td>${ratingSelect('overall', i, p.overall, scale)}</td>
+      <td>${ratingSelect('technical', i, p.technical, scale)}</td>
+      <td>${ratingSelect('understanding', i, p.understanding, scale)}</td>
+      ${SHOW_TEAM_FIELD ? `<td>${teamSelect(i, p.team)}</td>` : ''}
+      <td>
+        <input type="text" maxlength="500"
+               data-player-idx="${i}" data-player-field="notes"
+               value="${escapeHtml(p.notes)}" placeholder="Optional notes…" />
+      </td>
+      <td>
+        <button type="button" class="icon-btn" data-remove-idx="${i}"
+                ${state.players.length <= 1 ? 'disabled' : ''}
+                aria-label="Remove player">×</button>
+      </td>
+    </tr>
+  `;
+}
+
+function playerCardHtml(p, i, scale, dupes) {
+  const complete = isPlayerComplete(p);
+  const pinnieKey = String(p.pinnie || '').trim();
+  const isDup = pinnieKey && dupes.has(pinnieKey);
+
+  const teamField = SHOW_TEAM_FIELD ? `
+    <div class="rating-grid">
+      <div>
+        <div class="rating-block-label">Team selection</div>
+        <select data-player-idx="${i}" data-player-field="team">
+          <option value="">Select a team…</option>
+          ${TEAM_OPTIONS.map(t => `<option value="${escapeHtml(t)}"${p.team===t?' selected':''}>${escapeHtml(t)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+  ` : '';
+
+  return `
+    <div class="player-card${isDup ? ' duplicate' : ''}">
+      <div class="player-card-header">
+        <div class="player-card-title${complete ? ' complete' : ''}">
+          Player ${i + 1}${complete ? ' ✓' : ''}
+        </div>
+        <div class="player-card-actions">
+          <button type="button" class="icon-btn" data-remove-idx="${i}" ${state.players.length <= 1 ? 'disabled' : ''} aria-label="Remove player">×</button>
+        </div>
+      </div>
+
+      <div class="pinnie-row">
+        <label>Pinnie #</label>
+        <div>
+          <input type="text" inputmode="numeric" class="pinnie-input"
+                 data-player-idx="${i}" data-player-field="pinnie"
+                 value="${escapeHtml(p.pinnie)}" placeholder="e.g. 23" />
+          ${isDup ? '<div class="duplicate-msg">Duplicate pinnie # — must be unique</div>' : ''}
+        </div>
+      </div>
+
+      <div class="rating-grid">
+        <div>
+          <div class="rating-block-label">Overall ranking</div>
+          ${ratingPills('overall-' + i, p.overall, scale)}
+        </div>
+        <div>
+          <div class="rating-block-label">Technical</div>
+          <p class="rating-block-help">First touch, dribbling, passing, shooting, defensive qualities</p>
+          ${ratingPills('technical-' + i, p.technical, scale)}
+        </div>
+        <div>
+          <div class="rating-block-label">Game understanding</div>
+          <p class="rating-block-help">Positioning, decision-making, awareness</p>
+          ${ratingPills('understanding-' + i, p.understanding, scale)}
+        </div>
+      </div>
+
+      ${teamField}
+
+      <div class="field" style="margin-bottom: 0;">
+        <label class="field-label">Notes <span style="color: var(--text-3); font-weight: 400;">(optional)</span></label>
+        <textarea data-player-idx="${i}" data-player-field="notes" maxlength="500" rows="2">${escapeHtml(p.notes)}</textarea>
+      </div>
+    </div>
+  `;
+}
+
+function renderReview() {
+  const e = state.evaluator;
+  const grade = e.grade;
+  const dupes = findDuplicatePinnies();
+  const incompleteCount = state.players.filter(p => !isPlayerComplete(p)).length;
+
+  return `
+    <h1>Review and submit</h1>
+    <p class="subhead">${state.players.length} evaluation${state.players.length===1?'':'s'} for ${GRADE_LABELS[grade] || grade}. Confirm before submitting.</p>
+
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px;">
+      <div style="font-size: 12px; color: var(--text-2); margin-bottom: 4px;">Evaluator</div>
+      <div>${escapeHtml(e.name)} · ${escapeHtml(e.email)} · ${GRADE_LABELS[grade] || ''} · Night ${NIGHT}</div>
+    </div>
+
+    ${dupes.size > 0 ? `<div style="margin-bottom: 16px; padding: 12px 14px; background: var(--danger-bg); color: #991B1B; border-radius: var(--radius); font-size: 13px;">
+      Duplicate pinnie numbers detected. Each player must have a unique pinnie #. Go back and fix before submitting.
+    </div>` : ''}
+
+    ${incompleteCount > 0 ? `<div style="margin-bottom: 16px; padding: 12px 14px; background: var(--warn-bg); color: var(--warn-text); border-radius: var(--radius); font-size: 13px;">
+      ${incompleteCount} player${incompleteCount===1?'':'s'} ${incompleteCount===1?'is':'are'} incomplete. Go back and fill in all required fields.
+    </div>` : ''}
+
+    <!-- Desktop: table. Mobile (<=700px): card fallback. -->
+    <div class="review-table-wrap">
+      <table class="review-table">
+        <colgroup>
+          <col class="col-num" />
+          <col class="col-pinnie" />
+          <col class="col-rating" />
+          <col class="col-rating" />
+          <col class="col-rating" />
+          ${SHOW_TEAM_FIELD ? '<col class="col-team" />' : ''}
+          <col class="col-notes" />
+          <col class="col-edit" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Pinnie</th>
+            <th class="numeric">Overall</th>
+            <th class="numeric">Technical</th>
+            <th class="numeric">Underst.</th>
+            ${SHOW_TEAM_FIELD ? '<th>Team</th>' : ''}
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${state.players.map((p, i) => reviewRowHtml(p, i)).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="review-cards">
+      ${state.players.map((p, i) => reviewCardHtml(p, i)).join('')}
+    </div>
+
+    ${submitResult && submitResult.error ? `<div style="margin-top: 16px; padding: 12px 14px; background: var(--danger-bg); color: #991B1B; border-radius: var(--radius); font-size: 13px;">
+      Submission failed: ${escapeHtml(submitResult.error)}<br>Your draft is safe — try again.
+    </div>` : ''}
+
+    <button type="button" class="btn btn-primary btn-block" id="submit-all"
+            ${allPlayersValid() && !submitting ? '' : 'disabled'} style="margin-top: 20px;">
+      ${submitting ? 'Submitting…' : `Submit ${state.players.length} evaluation${state.players.length===1?'':'s'}`}
+    </button>
+  `;
+}
+
+function reviewRowHtml(p, i) {
+  const pinnieDisplay = String(p.pinnie || '').trim() || '—';
+  function ratingCell(val) {
+    return val
+      ? `<td class="numeric"><span class="rating-val">${escapeHtml(val)}</span></td>`
+      : `<td class="numeric"><span class="rating-val missing">—</span></td>`;
+  }
+  const teamCell = SHOW_TEAM_FIELD
+    ? (p.team
+        ? `<td><span class="rating-val">${escapeHtml(p.team)}</span></td>`
+        : `<td><span class="rating-val missing">—</span></td>`)
+    : '';
+  const notesCell = p.notes && p.notes.trim()
+    ? `<td class="notes-cell">${escapeHtml(p.notes)}</td>`
+    : `<td class="notes-cell empty">No notes</td>`;
+
+  return `
+    <tr>
+      <td style="color: var(--text-3); text-align: center;">${i + 1}</td>
+      <td><span class="pinnie-badge">${escapeHtml(pinnieDisplay)}</span></td>
+      ${ratingCell(p.overall)}
+      ${ratingCell(p.technical)}
+      ${ratingCell(p.understanding)}
+      ${teamCell}
+      ${notesCell}
+      <td><button type="button" class="btn btn-ghost edit-btn" data-edit-idx="${i}">Edit</button></td>
+    </tr>
+  `;
+}
+
+function reviewCardHtml(p, i) {
+  const teamRow = SHOW_TEAM_FIELD
+    ? `<div class="review-rating-row"><span class="review-rating-key">Team</span><span class="review-rating-val">${escapeHtml(p.team) || '—'}</span></div>`
+    : '';
+  const notesHtml = p.notes && p.notes.trim()
+    ? `<div class="review-notes">${escapeHtml(p.notes)}</div>`
+    : `<div class="review-notes empty">No notes</div>`;
+  const pinnieDisplay = String(p.pinnie || '').trim() || '—';
+
+  return `
+    <div class="review-card">
+      <div class="review-pinnie">
+        <div><span style="color: var(--text-2); font-size: 12px;">Pinnie</span> <span class="review-pinnie-num">${escapeHtml(pinnieDisplay)}</span></div>
+        <button type="button" class="btn btn-ghost" data-edit-idx="${i}" style="font-size: 13px;">Edit</button>
+      </div>
+      <div class="review-ratings">
+        <div class="review-rating-row"><span class="review-rating-key">Overall</span><span class="review-rating-val">${escapeHtml(p.overall) || '—'}</span></div>
+        <div class="review-rating-row"><span class="review-rating-key">Technical</span><span class="review-rating-val">${escapeHtml(p.technical) || '—'}</span></div>
+        <div class="review-rating-row"><span class="review-rating-key">Understanding</span><span class="review-rating-val">${escapeHtml(p.understanding) || '—'}</span></div>
+        ${teamRow}
+      </div>
+      <div class="review-notes-label">Notes</div>
+      ${notesHtml}
+    </div>
+  `;
+}
+
+function renderSubmitSuccess() {
+  return `
+    <div class="submit-result">
+      <div class="submit-result-icon">✓</div>
+      <h1>Submitted</h1>
+      <p class="subhead">${state.players.length} evaluation${state.players.length===1?'':'s'} sent to the committee.</p>
+      <button type="button" class="btn" id="start-new">Start a new evaluator session</button>
+    </div>
+  `;
+}
+
+function renderNav() {
+  const nav = document.getElementById('nav');
+  if (submitResult === 'success') { nav.innerHTML = ''; return; }
+  const step = state.step;
+  let left = '<div></div>', right = '<div class="right"></div>';
+
+  if (step === 1) {
+    right = `<div class="right"><button type="button" class="btn btn-primary" id="nav-next" ${evaluatorValid()?'':'disabled'}>Continue to players →</button></div>`;
+  } else if (step === 2) {
+    left = `<button type="button" class="btn" id="nav-back">← Back</button>`;
+    right = `<div class="right"><button type="button" class="btn btn-primary" id="nav-next" ${allPlayersValid()?'':'disabled'}>Review →</button></div>`;
+  } else if (step === 3) {
+    left = `<button type="button" class="btn" id="nav-back">← Back to players</button>`;
+  }
+
+  nav.innerHTML = left + right;
+
+  const back = document.getElementById('nav-back');
+  if (back) back.onclick = () => { state.step--; render(); };
+  const nxt = document.getElementById('nav-next');
+  if (nxt) nxt.onclick = () => { state.step++; render(); };
+}
+
+function handleEvaluatorChange(name, value) {
+  if (name === 'f-grade') state.evaluator.grade = value;
+  scheduleAutosave();
+  render();
+}
+
+function attachStepHandlers() {
+  // Generic pill clicks (evaluator step grade selector)
+  document.querySelectorAll('.pill').forEach(btn => {
+    btn.onclick = () => handleEvaluatorChange(btn.dataset.name, btn.dataset.value);
+  });
+
+  // Rating pill clicks
+  document.querySelectorAll('.rating-pill').forEach(btn => {
+    btn.onclick = () => {
+      const name = btn.dataset.ratingName;  // e.g. "overall-2"
+      const value = btn.dataset.ratingValue;
+      const [field, idxStr] = name.split('-');
+      const idx = parseInt(idxStr);
+      state.players[idx][field] = value;
+      scheduleAutosave();
+      render();
+    };
+  });
+
+  const discard = document.getElementById('discard-draft');
+  if (discard) discard.onclick = () => {
+    if (confirm('Discard your saved draft and start over?')) {
+      clearDraft();
+      state = DEFAULT_STATE();
+      window._resumed = null;
+      render();
+    }
+  };
+
+  if (state.step === 1) {
+    const n = document.getElementById('f-name');
+    if (n) n.oninput = e => { state.evaluator.name = e.target.value; scheduleAutosave(); renderNav(); };
+    const em = document.getElementById('f-email');
+    if (em) em.oninput = e => { state.evaluator.email = e.target.value; scheduleAutosave(); renderNav(); };
+  }
+
+  if (state.step === 2) {
+    document.querySelectorAll('[data-player-idx]').forEach(el => {
+      const idx = parseInt(el.dataset.playerIdx);
+      const field = el.dataset.playerField;
+
+      // Update state on every input. Use SURGICAL DOM updates rather than
+      // a full re-render so focus isn't stolen mid-typing or mid-Tab.
+      el.oninput = e => {
+        state.players[idx][field] = e.target.value;
+        scheduleAutosave();
+        if (field === 'pinnie') updateDuplicateMarkers();
+        updateRowState(idx);
+        updateCompletionCounter();
+        renderNav();
+      };
+      // <select> elements fire change on selection, not input.
+      el.onchange = e => {
+        state.players[idx][field] = e.target.value;
+        scheduleAutosave();
+        if (field === 'pinnie') updateDuplicateMarkers();
+        updateRowState(idx);
+        updateCompletionCounter();
+        renderNav();
+      };
+
+      // Enter key: advance focus forward; add a new row if at the end
+      // of the last row and that row is complete. This lets evaluators
+      // enter a player by typing pinnie → Tab/Enter through ratings →
+      // Enter to add the next row, all without reaching for the mouse.
+      el.onkeydown = e => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        // Sync any pending change from this element before deciding
+        // what's next.
+        if (state.players[idx][field] !== el.value) {
+          state.players[idx][field] = el.value;
+          scheduleAutosave();
+        }
+        handlePlayerEnter(idx);
+      };
+    });
+    document.querySelectorAll('[data-remove-idx]').forEach(btn => {
+      btn.onclick = () => {
+        const idx = parseInt(btn.dataset.removeIdx);
+        state.players.splice(idx, 1);
+        scheduleAutosave();
+        render();
+      };
+    });
+    const add = document.getElementById('add-player');
+    if (add) add.onclick = () => {
+      state.players.push(emptyPlayer());
+      scheduleAutosave();
+      render();
+      // Focus the new row's pinnie input. requestAnimationFrame ensures
+      // the DOM has rendered before we try to focus.
+      requestAnimationFrame(() => focusPinnie(state.players.length - 1));
+    };
+  }
+
+  if (state.step === 3) {
+    document.querySelectorAll('[data-edit-idx]').forEach(btn => {
+      btn.onclick = () => {
+        state.step = 2;
+        submitResult = null;
+        render();
+        // Scroll the player card into view.
+        requestAnimationFrame(() => {
+          const idx = parseInt(btn.dataset.editIdx);
+          const cards = document.querySelectorAll('.player-card');
+          if (cards[idx]) cards[idx].scrollIntoView({behavior: 'smooth', block: 'center'});
+        });
+      };
+    });
+    const submit = document.getElementById('submit-all');
+    if (submit) submit.onclick = submitEvaluations;
+  }
+
+  const startNew = document.getElementById('start-new');
+  if (startNew) startNew.onclick = () => {
+    state = DEFAULT_STATE();
+    submitResult = null;
+    window._resumed = null;
+    render();
+    window.scrollTo(0, 0);
+  };
+}
+
+function render() {
+  document.title = `ASC Tryout Evaluation — Night ${NIGHT}`;
+  document.getElementById('brand-subtitle').textContent = `Tryout evaluation · Night ${NIGHT}`;
+  renderStepper();
+  const c = document.getElementById('content');
+  if (submitResult === 'success') c.innerHTML = renderSubmitSuccess();
+  else if (state.step === 1) c.innerHTML = renderEvaluator();
+  else if (state.step === 2) c.innerHTML = renderPlayers();
+  else if (state.step === 3) c.innerHTML = renderReview();
+  renderNav();
+  attachStepHandlers();
+}
+
+// =============================================================
+// INIT
+// =============================================================
+function init() {
+  const draft = loadDraft();
+  if (draft && draft.evaluator) {
+    state = {...DEFAULT_STATE(), ...draft};
+    if (draft._savedAt) {
+      window._resumed = draft._savedAt;
+      setSaveStatus('saved', 'Saved');
+    }
+  }
+  render();
+}
+
+init();
+</script>
+
+</body>
+</html>
