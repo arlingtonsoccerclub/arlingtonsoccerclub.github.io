@@ -52,14 +52,27 @@
     margin-bottom: 20px;
     gap: 12px;
   }
-  .brand { display: flex; align-items: center; gap: 10px; }
-  .brand-mark {
-    width: 28px; height: 28px; border-radius: 50%;
-    background: var(--accent); color: white;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 13px;
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand-logo {
+    height: 40px; width: auto; flex-shrink: 0;
+    object-fit: contain;
   }
-  .brand-text { font-weight: 600; font-size: 15px; }
+  .brand-text-group {
+    display: flex; flex-direction: column; min-width: 0; line-height: 1.2;
+  }
+  .brand-title {
+    font-weight: 700; font-size: 16px; color: var(--text);
+    letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .brand-subtitle {
+    font-size: 12px; color: var(--text-2); font-weight: 500;
+  }
+  @media (max-width: 480px) {
+    .brand-logo { height: 32px; }
+    .brand-title { font-size: 14px; }
+    .brand-subtitle { font-size: 11px; }
+  }
   .save-status {
     font-size: 12px; color: var(--text-3);
     display: flex; align-items: center; gap: 6px;
@@ -319,8 +332,11 @@
 
   <div class="header">
     <div class="brand">
-      <div class="brand-mark">A</div>
-      <div class="brand-text">Player evaluation · 2026</div>
+      <img class="brand-logo" src="asc-logo.png" alt="Arlington Soccer Club" onerror="this.style.display='none'" />
+      <div class="brand-text-group">
+        <div class="brand-title">Arlington Soccer Club</div>
+        <div class="brand-subtitle">Player evaluation · 2026</div>
+      </div>
     </div>
     <div class="save-status" id="save-status"></div>
   </div>
