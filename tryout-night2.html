@@ -433,7 +433,7 @@ const CONFIG = {
 // =============================================================
 const DEFAULT_STATE = () => ({
   step: 1,
-  evaluator: { name: '', email: '', grade: '' },
+  evaluator: { name: '', email: '', grade: '', gender: '' },
   players: [emptyPlayer()],
   submittedAt: null
 });
@@ -480,6 +480,8 @@ const GRADE_LABELS = {
   '5': 'Grade 5', '6': 'Grade 6', '78': 'Grade 7/8'
 };
 
+const GENDER_LABELS = { boys: 'Boys', girls: 'Girls' };
+
 const TEAM_OPTIONS = ['A', 'A/B', 'B', 'B/C', 'C', 'Non-Select'];
 
 // =============================================================
@@ -493,13 +495,22 @@ function escapeHtml(s) {
 
 function evaluatorValid() {
   const e = state.evaluator;
-  return e.name.trim() && e.email.trim() && e.grade;
+  return e.name.trim() && e.email.trim() && e.grade && e.gender;
 }
 
+// Required player fields. Pinnie and Overall are the only required ones;
+// Technical, Understanding, Notes, and Team (Night 2) are all optional.
+// Source of truth — used by validation, Enter-key advancement, and the
+// "complete" indicator. Team is intentionally NOT in this list even on
+// Night 2 because it's optional per spec.
+const REQUIRED_PLAYER_FIELDS = ['pinnie', 'overall'];
+
 function isPlayerComplete(p) {
-  if (!p.pinnie || !String(p.pinnie).trim()) return false;
-  if (!p.overall || !p.technical || !p.understanding) return false;
-  if (SHOW_TEAM_FIELD && !p.team) return false;
+  for (let i = 0; i < REQUIRED_PLAYER_FIELDS.length; i++) {
+    const f = REQUIRED_PLAYER_FIELDS[i];
+    const v = p[f];
+    if (!v || !String(v).trim()) return false;
+  }
   return true;
 }
 
@@ -562,30 +573,28 @@ function focusPinnie(rowIdx) {
 }
 
 // Required fields for "row complete enough to advance to next row".
-// Notes is optional and pinnies-with-duplicates don't count as complete.
+// Pinnies-with-duplicates don't count as complete.
 function rowReadyForNext(idx) {
   const p = state.players[idx];
   if (!p) return false;
+  if (!isPlayerComplete(p)) return false;
   const pinnieKey = String(p.pinnie || '').trim();
-  if (!pinnieKey) return false;
-  if (!p.overall || !p.technical || !p.understanding) return false;
-  if (SHOW_TEAM_FIELD && !p.team) return false;
-  // Don't auto-advance off a row with a duplicate pinnie — force the user
-  // to fix it before moving on.
   if (findDuplicatePinnies().has(pinnieKey)) return false;
   return true;
 }
 
 // Called when Enter is pressed inside any cell on row `idx`. Decides where
 // focus should go next: the next empty required field in this row, or the
-// next row's pinnie (creating a new row if needed).
+// next row's pinnie (creating a new row if needed). Optional fields don't
+// gate the advance — Enter from Technical, Understanding, Notes, or Team
+// will jump straight to the next row once Pinnie and Overall are filled.
 function handlePlayerEnter(idx) {
   const p = state.players[idx];
-  const order = rowFieldOrder();
-  // Find the first empty *required* field in this row.
-  for (const f of order) {
-    if (f === 'notes') continue; // optional
-    if (!p[f] || (f === 'pinnie' && !String(p[f]).trim())) {
+  // Find the first empty required field in this row.
+  for (let i = 0; i < REQUIRED_PLAYER_FIELDS.length; i++) {
+    const f = REQUIRED_PLAYER_FIELDS[i];
+    const v = p[f];
+    if (!v || !String(v).trim()) {
       focusField(idx, f);
       return;
     }
@@ -689,9 +698,11 @@ function updateCompletionCounter() {
   const subhead = document.querySelector('h1 + .subhead');
   if (!subhead) return;
   const grade = state.evaluator.grade;
+  const gender = state.evaluator.gender;
   const completedCount = state.players.filter(isPlayerComplete).length;
+  const sessionLabel = [GENDER_LABELS[gender], GRADE_LABELS[grade]].filter(Boolean).join(' ');
   subhead.textContent =
-    (GRADE_LABELS[grade] || '') + ' · ' +
+    (sessionLabel || '') + ' · ' +
     state.players.length + ' player' + (state.players.length === 1 ? '' : 's') + ' added · ' +
     completedCount + ' complete';
 }
@@ -832,6 +843,14 @@ function renderEvaluator() {
         {v:'5',l:'Grade 5'},{v:'6',l:'Grade 6'},{v:'78',l:'Grade 7/8'}
       ])}
     </div>
+
+    <div class="field">
+      <label class="field-label">Gender</label>
+      <p class="field-help">Are you evaluating the boys or girls session?</p>
+      ${pillRadio('f-gender', e.gender, [
+        {v:'boys',l:'Boys'},{v:'girls',l:'Girls'}
+      ])}
+    </div>
   `;
 }
 
@@ -874,7 +893,7 @@ function renderPlayers() {
 
   return `
     <h1>Player evaluations</h1>
-    <p class="subhead">${GRADE_LABELS[grade] || ''} · ${state.players.length} player${state.players.length===1?'':'s'} added · ${completedCount} complete</p>
+    <p class="subhead">${[GENDER_LABELS[state.evaluator.gender], GRADE_LABELS[grade]].filter(Boolean).join(' ')} · ${state.players.length} player${state.players.length===1?'':'s'} added · ${completedCount} complete</p>
 
     ${rubricCardHtml(grade)}
 
@@ -1037,11 +1056,11 @@ function renderReview() {
 
   return `
     <h1>Review and submit</h1>
-    <p class="subhead">${state.players.length} evaluation${state.players.length===1?'':'s'} for ${GRADE_LABELS[grade] || grade}. Confirm before submitting.</p>
+    <p class="subhead">${state.players.length} evaluation${state.players.length===1?'':'s'} for ${[GENDER_LABELS[e.gender], GRADE_LABELS[grade]].filter(Boolean).join(' ') || grade}. Confirm before submitting.</p>
 
     <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px;">
       <div style="font-size: 12px; color: var(--text-2); margin-bottom: 4px;">Evaluator</div>
-      <div>${escapeHtml(e.name)} · ${escapeHtml(e.email)} · ${GRADE_LABELS[grade] || ''} · Night ${NIGHT}</div>
+      <div>${escapeHtml(e.name)} · ${escapeHtml(e.email)} · ${[GENDER_LABELS[e.gender], GRADE_LABELS[grade]].filter(Boolean).join(' ')} · Night ${NIGHT}</div>
     </div>
 
     ${dupes.size > 0 ? `<div style="margin-bottom: 16px; padding: 12px 14px; background: var(--danger-bg); color: #991B1B; border-radius: var(--radius); font-size: 13px;">
@@ -1191,6 +1210,7 @@ function renderNav() {
 
 function handleEvaluatorChange(name, value) {
   if (name === 'f-grade') state.evaluator.grade = value;
+  else if (name === 'f-gender') state.evaluator.gender = value;
   scheduleAutosave();
   render();
 }
