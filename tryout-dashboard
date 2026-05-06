@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root {
+    --bg: #FAFAF7;
+    --surface: #FFFFFF;
+    --text: #1A1A1A;
+    --text-2: #6B6B6B;
+    --text-3: #9A9A95;
+    --border: #E5E5E0;
+    --border-strong: #C8C8C0;
+    --accent: #800000;
+    --accent-bg: #F6E0E0;
+    --accent-text: #4A0000;
+    --warn-bg: #FEF3C7;
+    --warn-text: #92400E;
+    --info-bg: #E0F2FE;
+    --info-text: #075985;
+    --row-hover: #F5F5F0;
+    --row-selected: #F6E0E0;
+    --radius: 8px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+
+  .layout { display: flex; flex-direction: column; height: 100vh; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 16px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand-logo { height: 36px; width: auto; flex-shrink: 0; object-fit: contain; }
+  .brand-text-group { display: flex; flex-direction: column; line-height: 1.2; }
+  .brand-title { font-weight: 700; font-size: 15px; color: var(--text); letter-spacing: -0.01em; }
+  .brand-subtitle { font-size: 12px; color: var(--text-2); font-weight: 500; }
+  .topbar-meta { font-size: 12px; color: var(--text-2); display: flex; gap: 14px; }
+  .topbar-meta button {
+    background: transparent; border: 0; color: var(--text-2); font-size: 12px;
+    cursor: pointer; padding: 0; font-family: inherit;
+  }
+  .topbar-meta button:hover { color: var(--text); text-decoration: underline; }
+
+  .body { display: flex; flex: 1; min-height: 0; }
+
+  .filters {
+    width: 240px; flex-shrink: 0; background: var(--surface);
+    border-right: 1px solid var(--border); padding: 16px; overflow-y: auto;
+  }
+  .filter-section { margin-bottom: 18px; }
+  .filter-label {
+    font-size: 11px; font-weight: 600; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+  }
+  .filter-input {
+    width: 100%; padding: 8px 10px; font-family: inherit; font-size: 13px;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius);
+  }
+  .filter-input:focus { outline: none; border-color: var(--accent); }
+  .filter-options { display: flex; flex-direction: column; gap: 4px; }
+  .filter-option {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    padding: 5px 8px; border-radius: 6px; font-size: 13px; user-select: none;
+  }
+  .filter-option:hover { background: var(--row-hover); }
+  .filter-option input { margin: 0; accent-color: var(--accent); }
+  .filter-count { color: var(--text-3); margin-left: auto; font-size: 12px; }
+
+  .range-row {
+    display: flex; gap: 6px; align-items: center;
+    font-size: 12px; color: var(--text-2);
+  }
+  .range-row input[type="number"] {
+    width: 100%; padding: 6px 8px; font-family: inherit; font-size: 13px;
+    border: 1px solid var(--border); border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .clear-filters {
+    width: 100%; padding: 8px; font-family: inherit; font-size: 13px;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: var(--radius); cursor: pointer; color: var(--text-2);
+  }
+  .clear-filters:hover { border-color: var(--border-strong); color: var(--text); }
+
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+  .controls {
+    padding: 12px 20px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 12px; align-items: center; flex-shrink: 0;
+  }
+  .controls-summary {
+    font-size: 13px; color: var(--text-2); margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .table-container { flex: 1; min-height: 0; overflow: auto; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { position: sticky; top: 0; background: var(--surface); z-index: 2; }
+  th {
+    text-align: left; padding: 10px 14px; font-weight: 600;
+    border-bottom: 1px solid var(--border); cursor: pointer;
+    color: var(--text-2); white-space: nowrap; user-select: none;
+  }
+  th:hover { color: var(--text); background: var(--row-hover); }
+  th .sort-arrow { color: var(--accent); margin-left: 4px; font-size: 11px; }
+  th.numeric, td.numeric { text-align: center; font-variant-numeric: tabular-nums; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr.player-row { cursor: pointer; }
+  tr.player-row:hover { background: var(--row-hover); }
+  tr.player-row.selected { background: var(--row-selected); }
+
+  .pinnie-badge {
+    display: inline-block; background: var(--accent); color: white;
+    padding: 3px 10px; border-radius: 6px; font-weight: 700;
+    font-size: 13px; min-width: 32px; text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    font-size: 11px; font-weight: 500;
+  }
+  .badge-night { background: #EFEFEA; color: var(--text-2); }
+  .badge-team  { background: var(--info-bg); color: var(--info-text); }
+  .badge-notes { background: var(--warn-bg); color: var(--warn-text); }
+  .empty {
+    text-align: center; padding: 48px 20px; color: var(--text-2); font-size: 14px;
+  }
+
+  .detail {
+    width: 420px; flex-shrink: 0; background: var(--surface);
+    border-left: 1px solid var(--border); overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  .detail-empty {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    color: var(--text-3); padding: 40px; text-align: center; font-size: 13px;
+  }
+  .detail-content { padding: 20px; }
+  .detail-close {
+    position: absolute; top: 12px; right: 12px;
+    background: transparent; border: 0; cursor: pointer;
+    font-size: 20px; color: var(--text-3); padding: 4px 8px; border-radius: 4px;
+  }
+  .detail-close:hover { background: var(--row-hover); color: var(--text); }
+  .detail-header { position: relative; padding-right: 32px; margin-bottom: 16px; }
+  .detail-name {
+    font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .detail-meta { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+
+  .detail-aggregate {
+    background: var(--accent-bg); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 20px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .detail-agg-cell { text-align: center; }
+  .detail-agg-label {
+    font-size: 11px; color: var(--accent-text); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .detail-agg-value {
+    font-size: 22px; font-weight: 700; color: var(--accent-text);
+    margin-top: 4px; font-variant-numeric: tabular-nums;
+  }
+  .detail-agg-value.empty { color: var(--text-3); font-size: 18px; }
+
+  .detail-section { margin-bottom: 16px; }
+  .detail-section-label {
+    font-size: 11px; font-weight: 600; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+
+  .submission-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px;
+  }
+  .submission-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 8px; margin-bottom: 8px;
+  }
+  .submission-evaluator { font-weight: 600; font-size: 14px; }
+  .submission-meta { font-size: 11px; color: var(--text-3); }
+  .submission-ratings {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .submission-rating { text-align: center; }
+  .submission-rating-label {
+    font-size: 10px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .submission-rating-value {
+    font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px;
+  }
+  .submission-rating-value.missing { color: var(--text-3); font-weight: 400; }
+  .submission-team {
+    font-size: 12px; color: var(--info-text); background: var(--info-bg);
+    padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 6px;
+  }
+  .submission-notes {
+    font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word;
+    color: var(--text);
+  }
+  .submission-notes.empty { color: var(--text-3); font-style: italic; font-size: 12px; }
+  .submission-night-divider {
+    font-size: 11px; font-weight: 600; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 8px 0 4px; margin-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .submission-night-divider:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    flex: 1; color: var(--text-2); font-size: 13px;
+  }
+  .spinner {
+    width: 16px; height: 16px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 1100px) {
+    .filters { width: 200px; }
+    .detail { width: 360px; }
+  }
+  @media (max-width: 900px) {
+    .detail { width: 320px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <div class="topbar">
+    <div class="brand">
+      <img class="brand-logo" id="brand-logo" alt="Arlington Soccer Club" onerror="this.style.display='none'" />
+      <div class="brand-text-group">
+        <div class="brand-title">Arlington Soccer Club</div>
+        <div class="brand-subtitle">Tryouts dashboard · 2026</div>
+      </div>
+    </div>
+    <div class="topbar-meta">
+      <span id="user-email"></span>
+      <button id="refresh-btn">Refresh</button>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <div class="filters">
+      <div class="filter-section">
+        <div class="filter-label">Search by pinnie</div>
+        <input type="text" inputmode="numeric" class="filter-input" id="search-pinnie" placeholder="e.g. 17" autocomplete="off" />
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-label">Search by evaluator</div>
+        <input type="text" class="filter-input" id="search-evaluator" placeholder="Name…" autocomplete="off" />
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-label">Gender</div>
+        <div class="filter-options" id="gender-filter"></div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-label">Grade</div>
+        <div class="filter-options" id="grade-filter"></div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-label">Night</div>
+        <div class="filter-options" id="night-filter"></div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-label">Team selection (Night 2)</div>
+        <div class="filter-options" id="team-filter"></div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-label">Avg overall score</div>
+        <div class="range-row">
+          <input type="number" id="score-min" placeholder="min" step="0.5" min="1" max="4" />
+          <span>to</span>
+          <input type="number" id="score-max" placeholder="max" step="0.5" min="1" max="4" />
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <button class="clear-filters" id="clear-filters">Clear filters</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="controls">
+        <div class="controls-summary" id="summary"></div>
+      </div>
+      <div class="table-container" id="table-container">
+        <div class="loading"><div class="spinner"></div>Loading tryouts…</div>
+      </div>
+    </div>
+
+    <div class="detail" id="detail">
+      <div class="detail-empty">Click a player to see all evaluator submissions and notes</div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// =============================================================
+// CONFIG
+// =============================================================
+// Once the ASC logo is on GitHub Pages, paste its public URL here.
+const LOGO_URL = 'asc-logo.png';
+
+// =============================================================
+// STATE
+// =============================================================
+let allPlayers = [];
+let evaluatorMap = {};   // for the "search by evaluator" filter — built from detail data lazily
+let selectedKey = null;
+const filters = {
+  pinnie: '',
+  evaluator: '',
+  genders: new Set(),
+  grades: new Set(),
+  nights: new Set(),
+  teams: new Set(),
+  scoreMin: '',
+  scoreMax: ''
+};
+let sort = { column: 'pinnie', direction: 'asc' };
+
+// Cache of detail data: key -> {submissions: [...]}. Populated as the user
+// clicks rows. Used for evaluator-name filtering — without it, the
+// evaluator filter can only operate on the names already loaded.
+const detailCache = {};
+
+// =============================================================
+// CONSTANTS
+// =============================================================
+function gradeOrder(g) {
+  const m = String(g).match(/(\d+)/);
+  return m ? parseInt(m[1]) : 99;
+}
+
+// =============================================================
+// LOAD
+// =============================================================
+function load() {
+  document.getElementById('table-container').innerHTML =
+    '<div class="loading"><div class="spinner"></div>Loading tryouts…</div>';
+  google.script.run
+    .withSuccessHandler(onPlayersLoaded)
+    .withFailureHandler(onLoadError)
+    .getTryoutPlayers();
+}
+
+function onPlayersLoaded(players) {
+  allPlayers = players || [];
+  buildFilterOptions();
+  render();
+}
+
+function onLoadError(err) {
+  document.getElementById('table-container').innerHTML =
+    '<div class="empty">Failed to load: ' + escapeHtml(err.message || err) + '</div>';
+}
+
+// =============================================================
+// FILTER OPTIONS
+// =============================================================
+function buildFilterOptions() {
+  const counts = {
+    gender: {}, grade: {}, night: { '1': 0, '2': 0 }, team: {}
+  };
+  allPlayers.forEach(p => {
+    if (p.gender) counts.gender[p.gender] = (counts.gender[p.gender] || 0) + 1;
+    if (p.grade) counts.grade[p.grade] = (counts.grade[p.grade] || 0) + 1;
+    p.nights.forEach(n => { counts.night[String(n)] = (counts.night[String(n)] || 0) + 1; });
+    p.teams.forEach(t => { counts.team[t] = (counts.team[t] || 0) + 1; });
+  });
+
+  document.getElementById('gender-filter').innerHTML =
+    Object.keys(counts.gender).sort().map(g => optionHtml('gender', g, counts.gender[g])).join('') ||
+    '<div style="font-size: 12px; color: var(--text-3);">No data</div>';
+
+  document.getElementById('grade-filter').innerHTML =
+    Object.keys(counts.grade).sort((a, b) => gradeOrder(a) - gradeOrder(b))
+      .map(g => optionHtml('grade', g, counts.grade[g])).join('') ||
+    '<div style="font-size: 12px; color: var(--text-3);">No data</div>';
+
+  document.getElementById('night-filter').innerHTML =
+    ['1', '2'].map(n => optionHtml('night', n, counts.night[n] || 0, 'Night ' + n)).join('');
+
+  const teamKeys = Object.keys(counts.team).sort();
+  document.getElementById('team-filter').innerHTML = teamKeys.length
+    ? teamKeys.map(t => optionHtml('team', t, counts.team[t])).join('')
+    : '<div style="font-size: 12px; color: var(--text-3);">No Night 2 data yet</div>';
+
+  document.querySelectorAll('[data-filter-type]').forEach(el => {
+    el.onchange = () => {
+      const type = el.dataset.filterType;
+      const value = el.dataset.filterValue;
+      const set = filters[type + 's']; // genders, grades, nights, teams
+      if (el.checked) set.add(value); else set.delete(value);
+      render();
+    };
+  });
+}
+
+function optionHtml(type, value, count, label) {
+  const display = label || value;
+  return `<label class="filter-option">
+    <input type="checkbox" data-filter-type="${type}" data-filter-value="${escapeAttr(value)}">
+    <span>${escapeHtml(display)}</span>
+    <span class="filter-count">${count}</span>
+  </label>`;
+}
+
+// =============================================================
+// FILTER + SORT + RENDER
+// =============================================================
+function getFiltered() {
+  const minS = parseFloat(filters.scoreMin);
+  const maxS = parseFloat(filters.scoreMax);
+
+  return allPlayers.filter(p => {
+    if (filters.pinnie) {
+      // Pinnie-search uses startsWith for fast typing — useful when
+      // committee thinks of pinnies as ranges (1xx, 2xx, etc).
+      if (!String(p.pinnie).startsWith(filters.pinnie)) return false;
+    }
+    if (filters.evaluator) {
+      // Evaluator-name filter requires detail data. We only know the
+      // evaluator names from rows whose detail has been fetched. Until
+      // the user clicks at least once, this filter shows nothing — which
+      // is honest: we can't filter on data we haven't loaded.
+      const detail = detailCache[p.key];
+      if (!detail) return false;
+      const q = filters.evaluator.toLowerCase();
+      const found = detail.submissions.some(s =>
+        (s.evaluatorName || '').toLowerCase().indexOf(q) !== -1);
+      if (!found) return false;
+    }
+    if (filters.genders.size > 0 && !filters.genders.has(p.gender)) return false;
+    if (filters.grades.size > 0 && !filters.grades.has(p.grade)) return false;
+    if (filters.nights.size > 0) {
+      const hasMatch = p.nights.some(n => filters.nights.has(String(n)));
+      if (!hasMatch) return false;
+    }
+    if (filters.teams.size > 0) {
+      const hasTeamMatch = p.teams.some(t => filters.teams.has(t));
+      if (!hasTeamMatch) return false;
+    }
+    if (!isNaN(minS) || !isNaN(maxS)) {
+      const o = p.avgOverall;
+      if (o == null) return false;
+      if (!isNaN(minS) && o < minS) return false;
+      if (!isNaN(maxS) && o > maxS) return false;
+    }
+    return true;
+  });
+}
+
+function getSorted(rows) {
+  const dir = sort.direction === 'asc' ? 1 : -1;
+  const col = sort.column;
+  return rows.slice().sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (col === 'pinnie') {
+      // Try numeric sort first; fall back to string.
+      const na = parseFloat(va), nb = parseFloat(vb);
+      if (!isNaN(na) && !isNaN(nb)) { va = na; vb = nb; }
+    }
+    if (col === 'grade') { va = gradeOrder(va); vb = gradeOrder(vb); }
+    // null/empty sort last regardless of direction (relevant for avg score columns)
+    const aBlank = va === '' || va == null || (typeof va === 'number' && isNaN(va));
+    const bBlank = vb === '' || vb == null || (typeof vb === 'number' && isNaN(vb));
+    if (aBlank && bBlank) return 0;
+    if (aBlank) return 1;
+    if (bBlank) return -1;
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    return 0;
+  });
+}
+
+function render() {
+  const filtered = getFiltered();
+  const sorted = getSorted(filtered);
+  document.getElementById('summary').textContent =
+    sorted.length + ' of ' + allPlayers.length + ' players';
+
+  const container = document.getElementById('table-container');
+  if (sorted.length === 0) {
+    let msg = 'No players match the current filters.';
+    if (filters.evaluator && Object.keys(detailCache).length === 0) {
+      msg = 'Evaluator filter is active. Click any row first to load evaluator data, then re-apply.';
+    }
+    container.innerHTML = '<div class="empty">' + msg + '</div>';
+    return;
+  }
+  container.innerHTML = renderTable(sorted);
+  attachRowHandlers();
+}
+
+function renderTable(rows) {
+  const headerRow = `
+    <thead>
+      <tr>
+        <th data-sort="pinnie">Pinnie ${sortArrow('pinnie')}</th>
+        <th data-sort="gender">Gender ${sortArrow('gender')}</th>
+        <th data-sort="grade">Grade ${sortArrow('grade')}</th>
+        <th class="numeric" data-sort="evaluatorCount"># Eval ${sortArrow('evaluatorCount')}</th>
+        <th class="numeric" data-sort="avgOverall">Avg Overall ${sortArrow('avgOverall')}</th>
+        <th class="numeric" data-sort="avgTechnical">Avg Tech ${sortArrow('avgTechnical')}</th>
+        <th class="numeric" data-sort="avgUnderstanding">Avg Underst. ${sortArrow('avgUnderstanding')}</th>
+        <th>Nights</th>
+        <th>Teams</th>
+        <th></th>
+      </tr>
+    </thead>
+  `;
+  const body = rows.map(playerRowHtml).join('');
+  return '<table>' + headerRow + '<tbody>' + body + '</tbody></table>';
+}
+
+function fmtScore(v) {
+  if (v == null || isNaN(v)) return '<span style="color: var(--text-3);">—</span>';
+  return Number(v).toFixed(2);
+}
+
+function playerRowHtml(p) {
+  const sel = p.key === selectedKey ? ' selected' : '';
+  const nights = p.nights.map(n =>
+    `<span class="badge badge-night">N${n}</span>`).join(' ');
+  const teams = p.teams.map(t =>
+    `<span class="badge badge-team">${escapeHtml(t)}</span>`).join(' ');
+  const notesBadge = p.hasNotes
+    ? `<span class="badge badge-notes" title="Has notes">notes</span>`
+    : '';
+  return `
+    <tr class="player-row${sel}" data-key="${escapeAttr(p.key)}">
+      <td><span class="pinnie-badge">${escapeHtml(p.pinnie)}</span></td>
+      <td>${escapeHtml(p.gender || '—')}</td>
+      <td>${escapeHtml(p.grade || '—')}</td>
+      <td class="numeric">${p.evaluatorCount}</td>
+      <td class="numeric">${fmtScore(p.avgOverall)}</td>
+      <td class="numeric">${fmtScore(p.avgTechnical)}</td>
+      <td class="numeric">${fmtScore(p.avgUnderstanding)}</td>
+      <td>${nights || '—'}</td>
+      <td>${teams || '—'}</td>
+      <td>${notesBadge}</td>
+    </tr>
+  `;
+}
+
+function sortArrow(col) {
+  if (sort.column !== col) return '';
+  return `<span class="sort-arrow">${sort.direction === 'asc' ? '↑' : '↓'}</span>`;
+}
+
+function attachRowHandlers() {
+  document.querySelectorAll('[data-sort]').forEach(th => {
+    th.onclick = () => {
+      const col = th.dataset.sort;
+      if (sort.column === col) sort.direction = sort.direction === 'asc' ? 'desc' : 'asc';
+      else { sort.column = col; sort.direction = 'asc'; }
+      render();
+    };
+  });
+  document.querySelectorAll('.player-row').forEach(tr => {
+    tr.onclick = () => loadDetail(tr.dataset.key);
+  });
+}
+
+// =============================================================
+// DETAIL PANEL
+// =============================================================
+function loadDetail(key) {
+  selectedKey = key;
+  document.querySelectorAll('.player-row').forEach(tr => {
+    tr.classList.toggle('selected', tr.dataset.key === key);
+  });
+
+  // Use cache if we already fetched this one — avoids server round trips.
+  if (detailCache[key]) {
+    renderDetail(detailCache[key]);
+    return;
+  }
+
+  document.getElementById('detail').innerHTML =
+    '<div class="loading"><div class="spinner"></div>Loading…</div>';
+  google.script.run
+    .withSuccessHandler(d => {
+      if (d) {
+        detailCache[key] = d;
+        renderDetail(d);
+      } else {
+        document.getElementById('detail').innerHTML =
+          '<div class="detail-empty">No data found.</div>';
+      }
+    })
+    .withFailureHandler(err => {
+      document.getElementById('detail').innerHTML =
+        '<div class="detail-empty">Failed: ' + escapeHtml(err.message || err) + '</div>';
+    })
+    .getTryoutPlayerDetail(key);
+}
+
+function renderDetail(d) {
+  // Recompute aggregates client-side from the submissions we just got.
+  // Server sent them per-pinnie, but easier than threading through.
+  const subs = d.submissions || [];
+
+  function avg(field) {
+    const nums = subs.map(s => parseFloat(s[field])).filter(n => !isNaN(n));
+    if (nums.length === 0) return null;
+    return nums.reduce((a, b) => a + b, 0) / nums.length;
+  }
+  const aggs = {
+    overall: avg('overall'),
+    technical: avg('technical'),
+    understanding: avg('understanding')
+  };
+
+  const aggCell = (label, val) => `
+    <div class="detail-agg-cell">
+      <div class="detail-agg-label">${label}</div>
+      <div class="detail-agg-value${val == null ? ' empty' : ''}">${val == null ? '—' : Number(val).toFixed(2)}</div>
+    </div>
+  `;
+
+  // Group submissions by night for visual separation.
+  const byNight = { 1: [], 2: [] };
+  subs.forEach(s => { if (byNight[s.night]) byNight[s.night].push(s); });
+
+  let submissionsHtml = '';
+  [1, 2].forEach(night => {
+    const list = byNight[night];
+    if (list.length === 0) return;
+    submissionsHtml += `<div class="submission-night-divider">Night ${night} · ${list.length} submission${list.length === 1 ? '' : 's'}</div>`;
+    list.forEach(s => { submissionsHtml += submissionCardHtml(s); });
+  });
+
+  document.getElementById('detail').innerHTML = `
+    <div class="detail-content">
+      <div class="detail-header">
+        <button class="detail-close" id="detail-close" title="Close">×</button>
+        <div class="detail-name">
+          <span class="pinnie-badge">${escapeHtml(d.pinnie)}</span>
+          <span>${escapeHtml(d.gender || '')} ${escapeHtml(d.grade || '')}</span>
+        </div>
+        <div class="detail-meta">${subs.length} submission${subs.length === 1 ? '' : 's'} from ${countEvaluators(subs)} evaluator${countEvaluators(subs) === 1 ? '' : 's'}</div>
+      </div>
+
+      <div class="detail-aggregate">
+        ${aggCell('Avg Overall', aggs.overall)}
+        ${aggCell('Avg Tech', aggs.technical)}
+        ${aggCell('Avg Underst.', aggs.understanding)}
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-label">Submissions</div>
+        ${submissionsHtml}
+      </div>
+    </div>
+  `;
+  document.getElementById('detail-close').onclick = closeDetail;
+}
+
+function countEvaluators(subs) {
+  const names = {};
+  subs.forEach(s => { if (s.evaluatorName) names[s.evaluatorName.toLowerCase()] = true; });
+  return Object.keys(names).length;
+}
+
+function submissionCardHtml(s) {
+  const ts = s.submittedAt ? new Date(s.submittedAt) : null;
+  const tsStr = ts ? ts.toLocaleDateString([], {month: 'short', day: 'numeric'}) +
+    ' ' + ts.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : '';
+  const ratingCell = (label, val) => {
+    const empty = val == null || val === '';
+    return `<div class="submission-rating">
+      <div class="submission-rating-label">${label}</div>
+      <div class="submission-rating-value${empty ? ' missing' : ''}">${empty ? '—' : escapeHtml(val)}</div>
+    </div>`;
+  };
+  const teamHtml = s.team
+    ? `<div class="submission-team">Team: ${escapeHtml(s.team)}</div>`
+    : '';
+  const notesHtml = s.notes && s.notes.trim()
+    ? `<div class="submission-notes">${escapeHtml(s.notes)}</div>`
+    : `<div class="submission-notes empty">No notes</div>`;
+
+  return `
+    <div class="submission-card">
+      <div class="submission-header">
+        <div class="submission-evaluator">${escapeHtml(s.evaluatorName || '(unnamed)')}</div>
+        <div class="submission-meta">${escapeHtml(tsStr)}</div>
+      </div>
+      <div class="submission-ratings">
+        ${ratingCell('Overall', s.overall)}
+        ${ratingCell('Tech', s.technical)}
+        ${ratingCell('Underst.', s.understanding)}
+      </div>
+      ${teamHtml}
+      ${notesHtml}
+    </div>
+  `;
+}
+
+function closeDetail() {
+  selectedKey = null;
+  document.querySelectorAll('.player-row.selected').forEach(tr => tr.classList.remove('selected'));
+  document.getElementById('detail').innerHTML =
+    '<div class="detail-empty">Click a player to see all evaluator submissions and notes</div>';
+}
+
+// =============================================================
+// UTILITIES
+// =============================================================
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
+
+// =============================================================
+// EVENT WIRING
+// =============================================================
+document.getElementById('search-pinnie').oninput = e => {
+  filters.pinnie = e.target.value.trim();
+  render();
+};
+document.getElementById('search-evaluator').oninput = e => {
+  filters.evaluator = e.target.value.trim();
+  render();
+};
+document.getElementById('score-min').oninput = e => {
+  filters.scoreMin = e.target.value.trim();
+  render();
+};
+document.getElementById('score-max').oninput = e => {
+  filters.scoreMax = e.target.value.trim();
+  render();
+};
+
+document.getElementById('clear-filters').onclick = () => {
+  filters.pinnie = '';
+  filters.evaluator = '';
+  filters.genders.clear();
+  filters.grades.clear();
+  filters.nights.clear();
+  filters.teams.clear();
+  filters.scoreMin = '';
+  filters.scoreMax = '';
+  document.getElementById('search-pinnie').value = '';
+  document.getElementById('search-evaluator').value = '';
+  document.getElementById('score-min').value = '';
+  document.getElementById('score-max').value = '';
+  document.querySelectorAll('[data-filter-type]').forEach(el => el.checked = false);
+  render();
+};
+
+document.getElementById('refresh-btn').onclick = () => {
+  // Drop the detail cache so subsequent clicks re-fetch.
+  Object.keys(detailCache).forEach(k => delete detailCache[k]);
+  load();
+};
+
+document.onkeydown = e => {
+  if (e.key === 'Escape' && selectedKey !== null) closeDetail();
+};
+
+// =============================================================
+// INIT
+// =============================================================
+(function setupLogo() {
+  const img = document.getElementById('brand-logo');
+  if (LOGO_URL) img.src = LOGO_URL;
+  else img.style.display = 'none';
+})();
+
+load();
+</script>
+
+</body>
+</html>
