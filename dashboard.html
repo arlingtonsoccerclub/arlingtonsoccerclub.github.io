@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASC Tryouts Dashboard</title>
+<!--
+  Redirect page for the ASC Tryouts dashboard.
+
+  The dashboard itself is served by Apps Script (not GitHub Pages) so
+  that Google sign-in and the committee allowlist work automatically.
+  This file lives on github.io and gives committee members a clean URL
+  to bookmark; it bounces them to the real dashboard.
+
+  TO CONFIGURE:
+    1. In the Apps Script editor for the tryout project:
+         Deploy → Manage deployments → copy the Web app URL.
+       It looks like:
+         https://script.google.com/macros/s/AKfycbz...XYZ/exec
+    2. Paste that URL into DASHBOARD_URL below, with ?view=dashboard
+       appended. Example:
+         const DASHBOARD_URL =
+           'https://script.google.com/macros/s/AKfycbz...XYZ/exec?view=dashboard';
+    3. Commit and push to your arlingtonsoccerclub.github.io repo.
+    4. Link to this file from your index.html.
+
+  The same Apps Script URL is also used as the WEBHOOK_URL inside
+  tryout-eval.html.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAFAF7;
+    --surface: #FFFFFF;
+    --text: #1A1A1A;
+    --text-2: #6B6B6B;
+    --border: #E5E5E0;
+    --accent: #800000;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    text-align: center;
+    padding: 60px 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 440px; margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px 32px;
+  }
+  .brand-logo {
+    height: 56px; width: auto;
+    margin: 0 auto 16px; display: block;
+    object-fit: contain;
+  }
+  .brand-title {
+    font-size: 11px; font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.8px; text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  h1 {
+    font-size: 22px; font-weight: 600;
+    margin: 0 0 8px; letter-spacing: -0.01em;
+  }
+  p {
+    color: var(--text-2); line-height: 1.5;
+    margin: 0 0 16px; font-size: 14px;
+  }
+  .spinner {
+    width: 22px; height: 22px;
+    margin: 0 auto 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  a.btn {
+    display: inline-block;
+    padding: 10px 18px;
+    background: var(--accent); color: #FFF;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600; font-size: 14px;
+    font-family: inherit;
+    transition: background 0.12s;
+  }
+  a.btn:hover { background: #660000; }
+  .config-error .spinner { display: none; }
+  .config-error h1 { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="wrap">
+  <img class="brand-logo" src="asc-logo.png" alt="Arlington Soccer Club" onerror="this.style.display='none'" />
+  <div class="brand-title">Arlington Soccer Club · Tryouts</div>
+  <div class="spinner" id="spinner"></div>
+  <h1 id="title">Loading dashboard…</h1>
+  <p id="message">Redirecting you to the committee dashboard.</p>
+  <a class="btn" id="manual-link" href="#">Continue if not redirected</a>
+</div>
+
+<script>
+// Paste your Apps Script web-app URL here. Same URL used in tryout-eval.html
+// as the WEBHOOK_URL, with ?view=dashboard appended.
+const DASHBOARD_URL = 'https://script.google.com/a/macros/arlingtonsoccerclub.org/s/AKfycbwu8xWUIkoeQfexcOcioqkHl0m08xHqwvcb-y41ATiqWxzBLVhjWBAhPcDvUkUj1L8O/exec?view=dashboard';
+
+if (DASHBOARD_URL.startsWith('PASTE_')) {
+  // Not yet configured — surface a clear error rather than silently
+  // redirect to a broken URL.
+  document.getElementById('wrap').classList.add('config-error');
+  document.getElementById('title').textContent = 'Configuration needed';
+  document.getElementById('message').textContent =
+    'Edit this file and paste your Apps Script dashboard URL into the DASHBOARD_URL constant.';
+  document.getElementById('manual-link').style.display = 'none';
+} else {
+  document.getElementById('manual-link').href = DASHBOARD_URL;
+  // Use replace() so the redirect doesn't add a back-button entry —
+  // committee members hitting Back from the dashboard go to wherever
+  // they came from rather than bouncing through this page again.
+  window.location.replace(DASHBOARD_URL);
+}
+</script>
+
+</body>
+</html>
