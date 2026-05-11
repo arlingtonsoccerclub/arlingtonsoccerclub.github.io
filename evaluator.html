@@ -120,9 +120,22 @@
     border: 1px solid #BAE6FD;
     border-radius: var(--radius);
     padding: 12px 14px; margin-bottom: 20px;
-    font-size: 13px; line-height: 1.6;
+    font-size: 13px; line-height: 1.5;
   }
   .rubric-card strong { font-weight: 600; }
+  .rubric-title {
+    font-weight: 600; margin-bottom: 8px;
+  }
+  .rubric-rows {
+    display: grid; grid-template-columns: auto 1fr;
+    column-gap: 10px; row-gap: 4px;
+    align-items: baseline;
+  }
+  .rubric-score {
+    font-weight: 700; font-variant-numeric: tabular-nums;
+    text-align: right; min-width: 26px;
+  }
+  .rubric-desc { color: var(--info-text); }
 
   .rating-pill-group { display: flex; flex-wrap: wrap; gap: 4px; }
   .rating-pill {
@@ -921,25 +934,32 @@ function renderResumeBanner() {
 }
 
 function rubricCardHtml(grade) {
-  if (grade === '78') {
-    return `<div class="rubric-card">
-      <strong>Grade 7/8 rubric:</strong>
-      1 = Much higher / A team ·
-      1.5 = Slightly higher / Bubble A/B ·
-      2 = About the same / B team ·
-      2.5 = Slightly lower / Bubble B/Rec ·
-      3 = Much lower / C ·
-      3.5 = Bubble C/Rec ·
-      4 = Rec
-    </div>`;
-  }
+  // One row per score. Grade 7/8 extends the standard list with 3.5 and 4.
+  const standard = [
+    ['1',   'Much higher — A team'],
+    ['1.5', 'Slightly higher — Bubble A/B'],
+    ['2',   'About the same — B team'],
+    ['2.5', 'Slightly lower — Bubble B/Rec'],
+    ['3',   'Much lower — Rec']
+  ];
+  const g78 = [
+    ['1',   'Much higher — A team'],
+    ['1.5', 'Slightly higher — Bubble A/B'],
+    ['2',   'About the same — B team'],
+    ['2.5', 'Slightly lower — Bubble B/Rec'],
+    ['3',   'Much lower — C'],
+    ['3.5', 'Bubble C/Rec'],
+    ['4',   'Rec']
+  ];
+  const rows = grade === '78' ? g78 : standard;
+  const title = grade === '78' ? 'Grade 7/8 rubric' : 'Rubric';
+  const rowsHtml = rows.map(function(r) {
+    return '<div class="rubric-score">' + r[0] + '</div>' +
+           '<div class="rubric-desc">' + r[1] + '</div>';
+  }).join('');
   return `<div class="rubric-card">
-    <strong>Rubric:</strong>
-    1 = Much higher / A team ·
-    1.5 = Slightly higher / Bubble A/B ·
-    2 = About the same / B team ·
-    2.5 = Slightly lower / Bubble B/Rec ·
-    3 = Much lower / Rec
+    <div class="rubric-title">${title}</div>
+    <div class="rubric-rows">${rowsHtml}</div>
   </div>`;
 }
 
