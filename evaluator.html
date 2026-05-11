@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ASC Tryout Evaluation — Night 1</title>
+<title>ASC Tryout Evaluation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -401,7 +401,7 @@
       <img class="brand-logo" src="asc-logo.png" alt="Arlington Soccer Club" onerror="this.style.display='none'" />
       <div class="brand-text-group">
         <div class="brand-title">Arlington Soccer Club</div>
-        <div class="brand-subtitle" id="brand-subtitle">Tryout evaluation · Night 1</div>
+        <div class="brand-subtitle" id="brand-subtitle">Tryout evaluation</div>
       </div>
     </div>
     <div class="save-status" id="save-status"></div>
@@ -417,23 +417,39 @@
 
 <script>
 // =============================================================
-// CONFIGURATION — flip these two values for the Night 2 file.
+// CONFIGURATION
 // =============================================================
-const NIGHT = 1;            // 1 or 2
-const SHOW_TEAM_FIELD = false;   // true on night 2 only
+// Night and team-column visibility now derive from the evaluator's
+// selection on page 1 — see state.evaluator.night below.
 
 const CONFIG = {
   WEBHOOK_URL: 'https://script.google.com/macros/s/AKfycbwu8xWUIkoeQfexcOcioqkHl0m08xHqwvcb-y41ATiqWxzBLVhjWBAhPcDvUkUj1L8O/exec',
-  DRAFT_KEY: 'asc-tryout-draft-night' + NIGHT + '-v1',
   AUTOSAVE_DEBOUNCE_MS: 400
 };
+
+// Draft key is derived from (night, gender, grade) so each session has
+// its own autosave slot. Evaluators can have draft state for Night 1
+// boys G5 and Night 2 girls G4 simultaneously without one stomping the
+// other.
+function draftKey() {
+  const e = state.evaluator;
+  return 'asc-tryout-draft-' +
+    (e.night || 'unset') + '-' +
+    (e.gender || 'unset') + '-' +
+    (e.grade || 'unset') + '-v1';
+}
+
+// Whether to show the team-selection column. True on Night 2 only.
+function showTeamField() {
+  return state.evaluator.night === 2;
+}
 
 // =============================================================
 // STATE
 // =============================================================
 const DEFAULT_STATE = () => ({
   step: 1,
-  evaluator: { name: '', email: '', grade: '', gender: '' },
+  evaluator: { name: '', email: '', grade: '', gender: '', night: '' },
   players: [emptyPlayer()],
   submittedAt: null
 });
@@ -476,8 +492,8 @@ const STEPS = [
 ];
 
 const GRADE_LABELS = {
-  '2': '2', '3': '3', '4': '4',
-  '5': '5', '6': '6', '78': '7/8'
+  '2': 'Grade 2', '3': 'Grade 3', '4': 'Grade 4',
+  '5': 'Grade 5', '6': 'Grade 6', '78': 'Grade 7/8'
 };
 
 const GENDER_LABELS = { boys: 'Boys', girls: 'Girls' };
@@ -495,7 +511,7 @@ function escapeHtml(s) {
 
 function evaluatorValid() {
   const e = state.evaluator;
-  return e.name.trim() && e.email.trim() && e.grade && e.gender;
+  return e.name.trim() && e.email.trim() && e.grade && e.gender && e.night;
 }
 
 // Required player fields. Pinnie and Overall are the only required ones;
@@ -537,9 +553,9 @@ function allPlayersValid() {
 // KEYBOARD NAVIGATION (table view)
 // =============================================================
 // Field order traversed by Enter when advancing within a row.
-// Team is included only on Night 2 (SHOW_TEAM_FIELD).
+// Team is included only on Night 2 (showTeamField()).
 function rowFieldOrder() {
-  return SHOW_TEAM_FIELD
+  return showTeamField()
     ? ['pinnie', 'overall', 'technical', 'understanding', 'team', 'notes']
     : ['pinnie', 'overall', 'technical', 'understanding', 'notes'];
 }
@@ -719,10 +735,18 @@ function setSaveStatus(kind, text) {
 
 function scheduleAutosave() {
   if (saveTimer) clearTimeout(saveTimer);
+  // Don't autosave until night, gender, and grade are all set — without
+  // them, draftKey() would produce a key like "...-unset-unset-v1" and
+  // we'd accumulate orphan drafts as the user fills in fields.
+  const e = state.evaluator;
+  if (!e.night || !e.gender || !e.grade) {
+    setSaveStatus('', '');
+    return;
+  }
   setSaveStatus('saving', 'Saving…');
   saveTimer = setTimeout(() => {
     try {
-      localStorage.setItem(CONFIG.DRAFT_KEY, JSON.stringify({...state, _savedAt: Date.now()}));
+      localStorage.setItem(draftKey(), JSON.stringify({...state, _savedAt: Date.now()}));
       setSaveStatus('saved', 'Saved');
     } catch (err) {
       setSaveStatus('error', 'Save failed');
@@ -732,13 +756,13 @@ function scheduleAutosave() {
 
 function loadDraft() {
   try {
-    const raw = localStorage.getItem(CONFIG.DRAFT_KEY);
+    const raw = localStorage.getItem(draftKey());
     return raw ? JSON.parse(raw) : null;
   } catch (err) { return null; }
 }
 
 function clearDraft() {
-  try { localStorage.removeItem(CONFIG.DRAFT_KEY); } catch (e) {}
+  try { localStorage.removeItem(draftKey()); } catch (e) {}
 }
 
 // =============================================================
@@ -751,7 +775,7 @@ async function submitEvaluations() {
   render();
 
   const payload = {
-    night: NIGHT,
+    night: state.evaluator.night,
     submittedAt: new Date().toISOString(),
     evaluator: state.evaluator,
     players: state.players
@@ -836,6 +860,14 @@ function renderEvaluator() {
     </div>
 
     <div class="field">
+      <label class="field-label">Gender</label>
+      <p class="field-help">Are you evaluating the boys or girls session?</p>
+      ${pillRadio('f-gender', e.gender, [
+        {v:'boys',l:'Boys'},{v:'girls',l:'Girls'}
+      ])}
+    </div>
+
+    <div class="field">
       <label class="field-label">Grade level</label>
       <p class="field-help">Which grade are you evaluating tonight?</p>
       ${pillRadio('f-grade', e.grade, [
@@ -845,20 +877,46 @@ function renderEvaluator() {
     </div>
 
     <div class="field">
-      <label class="field-label">Gender</label>
-      <p class="field-help">Are you evaluating the boys or girls session?</p>
-      ${pillRadio('f-gender', e.gender, [
-        {v:'boys',l:'Boys'},{v:'girls',l:'Girls'}
+      <label class="field-label">Tryout night</label>
+      <p class="field-help">Which night of tryouts is this? Night 2 adds a team-selection column to each player.</p>
+      ${pillRadio('f-night', e.night, [
+        {v:1,l:'Night 1'},{v:2,l:'Night 2'}
       ])}
     </div>
   `;
 }
 
 function renderResumeBanner() {
-  if (!window._resumed) return '';
+  // Show the banner in two states:
+  // (1) After we've loaded a draft into state, confirm it's resumed.
+  // (2) Once the user has picked night+gender+grade and a matching draft
+  //     exists in localStorage, offer to resume it.
+  if (window._resumed) {
+    return `<div class="resume-banner">
+      <div>Resumed your saved draft.</div>
+      <button type="button" class="btn btn-ghost" id="discard-draft">Start over</button>
+    </div>`;
+  }
+  const e = state.evaluator;
+  if (!e.night || !e.gender || !e.grade) return '';
+  const draft = loadDraft();
+  if (!draft || !draft.players || draft.players.length === 0) return '';
+  // A skeleton-only draft (one empty player and nothing else) isn't worth
+  // offering to resume — that's just the initial state from a previous
+  // visit that didn't make progress.
+  const hasContent = draft.players.some(p =>
+    (p.pinnie || '').trim() || p.overall || p.technical || p.understanding || (p.notes || '').trim()
+  );
+  if (!hasContent) return '';
+  const when = draft._savedAt
+    ? new Date(draft._savedAt).toLocaleString([], {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'})
+    : '';
   return `<div class="resume-banner">
-    <div>Resumed your saved draft.</div>
-    <button type="button" class="btn btn-ghost" id="discard-draft">Start over</button>
+    <div>You have an unsubmitted draft for this session${when ? ` (last saved ${when})` : ''}.</div>
+    <div style="display: flex; gap: 8px;">
+      <button type="button" class="btn btn-ghost" id="resume-draft">Resume</button>
+      <button type="button" class="btn btn-ghost" id="discard-draft">Discard</button>
+    </div>
   </div>`;
 }
 
@@ -906,7 +964,7 @@ function renderPlayers() {
           <col class="col-rating" />
           <col class="col-rating" />
           <col class="col-rating" />
-          ${SHOW_TEAM_FIELD ? '<col class="col-team" />' : ''}
+          ${showTeamField() ? '<col class="col-team" />' : ''}
           <col class="col-notes" />
           <col class="col-remove" />
         </colgroup>
@@ -917,7 +975,7 @@ function renderPlayers() {
             <th>Overall</th>
             <th>Technical</th>
             <th>Understanding</th>
-            ${SHOW_TEAM_FIELD ? '<th>Team</th>' : ''}
+            ${showTeamField() ? '<th>Team</th>' : ''}
             <th>Notes</th>
             <th></th>
           </tr>
@@ -968,7 +1026,7 @@ function playerRowHtml(p, i, scale, dupes) {
       <td>${ratingSelect('overall', i, p.overall, scale)}</td>
       <td>${ratingSelect('technical', i, p.technical, scale)}</td>
       <td>${ratingSelect('understanding', i, p.understanding, scale)}</td>
-      ${SHOW_TEAM_FIELD ? `<td>${teamSelect(i, p.team)}</td>` : ''}
+      ${showTeamField() ? `<td>${teamSelect(i, p.team)}</td>` : ''}
       <td>
         <input type="text" maxlength="500"
                data-player-idx="${i}" data-player-field="notes"
@@ -988,7 +1046,7 @@ function playerCardHtml(p, i, scale, dupes) {
   const pinnieKey = String(p.pinnie || '').trim();
   const isDup = pinnieKey && dupes.has(pinnieKey);
 
-  const teamField = SHOW_TEAM_FIELD ? `
+  const teamField = showTeamField() ? `
     <div class="rating-grid">
       <div>
         <div class="rating-block-label">Team selection</div>
@@ -1060,7 +1118,7 @@ function renderReview() {
 
     <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px;">
       <div style="font-size: 12px; color: var(--text-2); margin-bottom: 4px;">Evaluator</div>
-      <div>${escapeHtml(e.name)} · ${escapeHtml(e.email)} · ${[GENDER_LABELS[e.gender], GRADE_LABELS[grade]].filter(Boolean).join(' ')} · Night ${NIGHT}</div>
+      <div>${escapeHtml(e.name)} · ${escapeHtml(e.email)} · ${[GENDER_LABELS[e.gender], GRADE_LABELS[grade]].filter(Boolean).join(' ')} · Night ${state.evaluator.night}</div>
     </div>
 
     ${dupes.size > 0 ? `<div style="margin-bottom: 16px; padding: 12px 14px; background: var(--danger-bg); color: #991B1B; border-radius: var(--radius); font-size: 13px;">
@@ -1080,7 +1138,7 @@ function renderReview() {
           <col class="col-rating" />
           <col class="col-rating" />
           <col class="col-rating" />
-          ${SHOW_TEAM_FIELD ? '<col class="col-team" />' : ''}
+          ${showTeamField() ? '<col class="col-team" />' : ''}
           <col class="col-notes" />
           <col class="col-edit" />
         </colgroup>
@@ -1091,7 +1149,7 @@ function renderReview() {
             <th class="numeric">Overall</th>
             <th class="numeric">Technical</th>
             <th class="numeric">Underst.</th>
-            ${SHOW_TEAM_FIELD ? '<th>Team</th>' : ''}
+            ${showTeamField() ? '<th>Team</th>' : ''}
             <th>Notes</th>
             <th></th>
           </tr>
@@ -1124,7 +1182,7 @@ function reviewRowHtml(p, i) {
       ? `<td class="numeric"><span class="rating-val">${escapeHtml(val)}</span></td>`
       : `<td class="numeric"><span class="rating-val missing">—</span></td>`;
   }
-  const teamCell = SHOW_TEAM_FIELD
+  const teamCell = showTeamField()
     ? (p.team
         ? `<td><span class="rating-val">${escapeHtml(p.team)}</span></td>`
         : `<td><span class="rating-val missing">—</span></td>`)
@@ -1148,7 +1206,7 @@ function reviewRowHtml(p, i) {
 }
 
 function reviewCardHtml(p, i) {
-  const teamRow = SHOW_TEAM_FIELD
+  const teamRow = showTeamField()
     ? `<div class="review-rating-row"><span class="review-rating-key">Team</span><span class="review-rating-val">${escapeHtml(p.team) || '—'}</span></div>`
     : '';
   const notesHtml = p.notes && p.notes.trim()
@@ -1211,6 +1269,11 @@ function renderNav() {
 function handleEvaluatorChange(name, value) {
   if (name === 'f-grade') state.evaluator.grade = value;
   else if (name === 'f-gender') state.evaluator.gender = value;
+  else if (name === 'f-night') {
+    // Night values from the pill list come in as strings — coerce to int
+    // so equality checks (state.evaluator.night === 2) work.
+    state.evaluator.night = parseInt(value, 10);
+  }
   scheduleAutosave();
   render();
 }
@@ -1236,12 +1299,27 @@ function attachStepHandlers() {
 
   const discard = document.getElementById('discard-draft');
   if (discard) discard.onclick = () => {
-    if (confirm('Discard your saved draft and start over?')) {
+    if (confirm('Discard the saved draft for this session?')) {
+      // Clear *this session's* draft but preserve the user's current
+      // picks (night/gender/grade/name/email) so they don't have to
+      // re-select. Players are reset to a single empty row.
       clearDraft();
+      const prevEvaluator = state.evaluator;
       state = DEFAULT_STATE();
+      state.evaluator = prevEvaluator;
       window._resumed = null;
       render();
     }
+  };
+
+  const resume = document.getElementById('resume-draft');
+  if (resume) resume.onclick = () => {
+    const draft = loadDraft();
+    if (!draft || !draft.evaluator) return;
+    state = { ...DEFAULT_STATE(), ...draft };
+    window._resumed = draft._savedAt || Date.now();
+    setSaveStatus('saved', 'Saved');
+    render();
   };
 
   if (state.step === 1) {
@@ -1340,8 +1418,11 @@ function attachStepHandlers() {
 }
 
 function render() {
-  document.title = `ASC Tryout Evaluation — Night ${NIGHT}`;
-  document.getElementById('brand-subtitle').textContent = `Tryout evaluation · Night ${NIGHT}`;
+  const n = state.evaluator.night;
+  const nightSuffix = n ? ` — Night ${n}` : '';
+  const subtitleSuffix = n ? ` · Night ${n}` : '';
+  document.title = `ASC Tryout Evaluation${nightSuffix}`;
+  document.getElementById('brand-subtitle').textContent = `Tryout evaluation${subtitleSuffix}`;
   renderStepper();
   const c = document.getElementById('content');
   if (submitResult === 'success') c.innerHTML = renderSubmitSuccess();
@@ -1356,14 +1437,9 @@ function render() {
 // INIT
 // =============================================================
 function init() {
-  const draft = loadDraft();
-  if (draft && draft.evaluator) {
-    state = {...DEFAULT_STATE(), ...draft};
-    if (draft._savedAt) {
-      window._resumed = draft._savedAt;
-      setSaveStatus('saved', 'Saved');
-    }
-  }
+  // Drafts are keyed by (night, gender, grade), so we can't load one until
+  // the evaluator has picked all three. The resume banner on the evaluator
+  // page checks for a matching draft whenever those three fields are set.
   render();
 }
 
