@@ -299,6 +299,23 @@
   }
   .nav-bar .right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
+  .instructions-box {
+    background: var(--accent-bg);
+    border: 1px solid #E0B0B0;
+    border-radius: var(--radius-lg);
+    padding: 18px 20px; margin-bottom: 24px;
+    font-size: 14px; line-height: 1.6;
+    color: var(--text);
+  }
+  .instructions-box h2, .instructions-box h3, .instructions-box h4 {
+    margin: 0 0 8px; font-weight: 600;
+  }
+  .instructions-box p { margin: 0 0 10px; }
+  .instructions-box p:last-child { margin-bottom: 0; }
+  .instructions-box ul, .instructions-box ol { margin: 0 0 10px; padding-left: 20px; }
+  .instructions-box li { margin-bottom: 4px; }
+  .instructions-box strong { font-weight: 600; }
+
   .resume-banner {
     background: var(--info-bg); color: var(--info-text);
     border: 1px solid #BAE6FD;
@@ -778,6 +795,30 @@ function clearDraft() {
   try { localStorage.removeItem(draftKey()); } catch (e) {}
 }
 
+// Scan localStorage for any saved tryout drafts that have real content.
+// Returns an array of { key, draft } objects sorted by _savedAt descending.
+function findAllDrafts() {
+  const results = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith('asc-tryout-draft-')) continue;
+      // Skip keys with "unset" segments — those are incomplete sessions.
+      if (key.includes('-unset-')) continue;
+      try {
+        const draft = JSON.parse(localStorage.getItem(key));
+        if (!draft || !draft.players || draft.players.length === 0) continue;
+        const hasContent = draft.players.some(p =>
+          (p.pinnie || '').trim() || p.overall || p.technical || p.understanding || (p.notes || '').trim()
+        );
+        if (hasContent) results.push({ key, draft });
+      } catch (e) {}
+    }
+  } catch (e) {}
+  results.sort((a, b) => (b.draft._savedAt || 0) - (a.draft._savedAt || 0));
+  return results;
+}
+
 // =============================================================
 // SUBMIT
 // =============================================================
@@ -858,6 +899,12 @@ function renderStepper() {
 function renderEvaluator() {
   const e = state.evaluator;
   return `
+    <div class="instructions-box" id="instructions-box">
+      <!-- Replace this content with your formatted instructions -->
+      <p>Welcome to the ASC tryout evaluation form. Please complete all fields below before continuing to player evaluations.</p>
+      <p><strong>Grade level is for the grade the players will be in during the season, not the current grade they are in. For example, if you are evaluating 2nd grade for the 3rd grade team, the grade level will be 'Grade 3'</strong></p>
+    </div>
+
     <h1>Evaluator info</h1>
     <p class="subhead">Enter your details once. You'll add player evaluations on the next step.</p>
     ${renderResumeBanner()}
@@ -882,9 +929,9 @@ function renderEvaluator() {
 
     <div class="field">
       <label class="field-label">Grade level</label>
-      <p class="field-help">Which grade are you evaluating tonight?</p>
+      <p class="field-help">Which grade are you evaluating for tonight? Reminder that this is the Grade that the players will be in during the team's season.</p>
       ${pillRadio('f-grade', e.grade, [
-        {v:'2',l:'Grade 2'},{v:'3',l:'Grade 3'},{v:'4',l:'Grade 4'},
+        {v:'3',l:'Grade 3'},{v:'4',l:'Grade 4'},
         {v:'5',l:'Grade 5'},{v:'6',l:'Grade 6'},{v:'78',l:'Grade 7/8'}
       ])}
     </div>
@@ -900,37 +947,68 @@ function renderEvaluator() {
 }
 
 function renderResumeBanner() {
-  // Show the banner in two states:
   // (1) After we've loaded a draft into state, confirm it's resumed.
-  // (2) Once the user has picked night+gender+grade and a matching draft
-  //     exists in localStorage, offer to resume it.
   if (window._resumed) {
     return `<div class="resume-banner">
       <div>Resumed your saved draft.</div>
       <button type="button" class="btn btn-ghost" id="discard-draft">Start over</button>
     </div>`;
   }
+
+  // (2) If night/gender/grade are all set, check for an exact-match draft.
   const e = state.evaluator;
-  if (!e.night || !e.gender || !e.grade) return '';
-  const draft = loadDraft();
-  if (!draft || !draft.players || draft.players.length === 0) return '';
-  // A skeleton-only draft (one empty player and nothing else) isn't worth
-  // offering to resume — that's just the initial state from a previous
-  // visit that didn't make progress.
-  const hasContent = draft.players.some(p =>
-    (p.pinnie || '').trim() || p.overall || p.technical || p.understanding || (p.notes || '').trim()
-  );
-  if (!hasContent) return '';
-  const when = draft._savedAt
-    ? new Date(draft._savedAt).toLocaleString([], {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'})
-    : '';
-  return `<div class="resume-banner">
-    <div>You have an unsubmitted draft for this session${when ? ` (last saved ${when})` : ''}.</div>
-    <div style="display: flex; gap: 8px;">
-      <button type="button" class="btn btn-ghost" id="resume-draft">Resume</button>
-      <button type="button" class="btn btn-ghost" id="discard-draft">Discard</button>
-    </div>
-  </div>`;
+  if (e.night && e.gender && e.grade) {
+    const draft = loadDraft();
+    if (draft && draft.players && draft.players.length > 0) {
+      const hasContent = draft.players.some(p =>
+        (p.pinnie || '').trim() || p.overall || p.technical || p.understanding || (p.notes || '').trim()
+      );
+      if (hasContent) {
+        const when = draft._savedAt
+          ? new Date(draft._savedAt).toLocaleString([], {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'})
+          : '';
+        return `<div class="resume-banner">
+          <div>You have an unsubmitted draft for this session${when ? ` (last saved ${when})` : ''}.</div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-ghost" id="resume-draft">Resume</button>
+            <button type="button" class="btn btn-ghost" id="discard-draft">Discard</button>
+          </div>
+        </div>`;
+      }
+    }
+  }
+
+  // (3) Before fields are filled, scan for any saved drafts and offer to
+  //     resume them immediately on page load.
+  if (!e.night || !e.gender || !e.grade) {
+    const allDrafts = findAllDrafts();
+    if (allDrafts.length === 0) return '';
+    const items = allDrafts.map((d, idx) => {
+      const ev = d.draft.evaluator || {};
+      const label = [
+        ev.night ? 'Night ' + ev.night : '',
+        GENDER_LABELS[ev.gender] || '',
+        GRADE_LABELS[ev.grade] || ''
+      ].filter(Boolean).join(' · ');
+      const when = d.draft._savedAt
+        ? new Date(d.draft._savedAt).toLocaleString([], {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'})
+        : '';
+      const count = d.draft.players ? d.draft.players.length : 0;
+      return `<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;${idx > 0 ? ' margin-top: 8px; padding-top: 8px; border-top: 1px solid #BAE6FD;' : ''}">
+        <div><strong>${label}</strong> — ${count} player${count===1?'':'s'}${when ? ` (saved ${when})` : ''}</div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-ghost resume-any-draft" data-draft-key="${escapeHtml(d.key)}">Resume</button>
+          <button type="button" class="btn btn-ghost discard-any-draft" data-draft-key="${escapeHtml(d.key)}">Discard</button>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="resume-banner">
+      <div style="margin-bottom: 6px; font-weight: 500;">You have unsubmitted draft${allDrafts.length===1?'':'s'}:</div>
+      ${items}
+    </div>`;
+  }
+
+  return '';
 }
 
 function rubricCardHtml(grade) {
@@ -1133,6 +1211,12 @@ function renderReview() {
   const incompleteCount = state.players.filter(p => !isPlayerComplete(p)).length;
 
   return `
+    <div class="instructions-box" id="review-instructions-box">
+      <!-- Replace this content with your formatted instructions -->
+      <p>Please review your evaluations below before submitting.</p>
+      <p>Please double check that the Grade Level is for the team you are evaluating, not the current grade level of the players</p>
+    </div>
+
     <h1>Review and submit</h1>
     <p class="subhead">${state.players.length} evaluation${state.players.length===1?'':'s'} for ${[GENDER_LABELS[e.gender], GRADE_LABELS[grade]].filter(Boolean).join(' ') || grade}. Confirm before submitting.</p>
 
@@ -1341,6 +1425,30 @@ function attachStepHandlers() {
     setSaveStatus('saved', 'Saved');
     render();
   };
+
+  // Resume/discard buttons shown before fields are filled (early banner).
+  document.querySelectorAll('.resume-any-draft').forEach(btn => {
+    btn.onclick = () => {
+      try {
+        const raw = localStorage.getItem(btn.dataset.draftKey);
+        if (!raw) return;
+        const draft = JSON.parse(raw);
+        if (!draft || !draft.evaluator) return;
+        state = { ...DEFAULT_STATE(), ...draft };
+        window._resumed = draft._savedAt || Date.now();
+        setSaveStatus('saved', 'Saved');
+        render();
+      } catch (e) {}
+    };
+  });
+  document.querySelectorAll('.discard-any-draft').forEach(btn => {
+    btn.onclick = () => {
+      if (confirm('Discard this saved draft?')) {
+        try { localStorage.removeItem(btn.dataset.draftKey); } catch (e) {}
+        render();
+      }
+    };
+  });
 
   if (state.step === 1) {
     const n = document.getElementById('f-name');
