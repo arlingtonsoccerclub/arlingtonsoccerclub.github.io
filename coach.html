@@ -358,6 +358,8 @@
 const CONFIG = {
   WEBHOOK_URL: 'https://script.google.com/macros/s/AKfycbwpKw2btw60M_fwJWGGM0CGvPw9iv6P0m8If7Or6PrKPo2wqUCPXrGwPF2kmNrB9_o/exec',
   DRAFT_KEY: 'asc-eval-draft-v1',
+  SUBMITTED_PREFIX: 'asc-eval-submitted-',
+  FORM_URL: 'https://tryouts.arlingtonsoccerclub.org/coach.html',
   AUTOSAVE_DEBOUNCE_MS: 400
 };
 
@@ -508,6 +510,62 @@ function clearDraft() {
 }
 
 // =============================================================
+// SUBMISSION CACHE — persists after submit for edit/resubmit
+// =============================================================
+function makeSubmissionId(team, timestamp) {
+  return (team.email || '') + '|' + (team.gender || '') + '|' + (team.grade || '') + '|' + timestamp;
+}
+
+function encodeId(id) {
+  try { return btoa(unescape(encodeURIComponent(id))); } catch { return btoa(id); }
+}
+
+function decodeId(encoded) {
+  try { return decodeURIComponent(escape(atob(encoded))); } catch { try { return atob(encoded); } catch { return null; } }
+}
+
+function submissionCacheKey(id) {
+  return CONFIG.SUBMITTED_PREFIX + encodeId(id);
+}
+
+function saveSubmission(submissionId, formState) {
+  try {
+    var data = JSON.stringify({...formState, _submissionId: submissionId, _savedAt: Date.now()});
+    localStorage.setItem(submissionCacheKey(submissionId), data);
+  } catch {}
+}
+
+function loadSubmission(submissionId) {
+  try {
+    var raw = localStorage.getItem(submissionCacheKey(submissionId));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function findAllSubmissions() {
+  var results = [];
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (!key || !key.startsWith(CONFIG.SUBMITTED_PREFIX)) continue;
+      try {
+        var data = JSON.parse(localStorage.getItem(key));
+        if (data && data.team) results.push(data);
+      } catch {}
+    }
+  } catch {}
+  results.sort(function(a, b) { return (b._savedAt || 0) - (a._savedAt || 0); });
+  return results;
+}
+
+function editUrl(submissionId) {
+  return CONFIG.FORM_URL + '?edit=' + encodeURIComponent(encodeId(submissionId));
+}
+
+// Track editing mode
+var editingSubmissionId = null;
+
+// =============================================================
 // SUBMIT
 // =============================================================
 async function submitEvaluations() {
@@ -515,8 +573,11 @@ async function submitEvaluations() {
   submitting = true;
   render();
 
+  const timestamp = new Date().toISOString();
+  const submissionId = makeSubmissionId(state.team, timestamp);
   const payload = {
-    submittedAt: new Date().toISOString(),
+    submittedAt: timestamp,
+    formUrl: CONFIG.FORM_URL,
     team: state.team,
     roster: state.roster,
     evaluations: state.evals
@@ -548,6 +609,9 @@ async function submitEvaluations() {
     submitting = false;
     submitResult = 'success';
     state.submittedAt = payload.submittedAt;
+    // Use server-returned hash if available, fall back to client-generated ID
+    editingSubmissionId = (body && body.editHash) || submissionId;
+    saveSubmission(editingSubmissionId, state);
     clearDraft();
     render();
 
@@ -654,10 +718,40 @@ function renderTeamInfo() {
 }
 
 function renderResumeBanner() {
-  if (!window._resumed) return '';
-  return `<div class="resume-banner">
-    <div class="resume-banner-text">Resumed your saved draft from ${formatTime(window._resumed)}.</div>
-    <button type="button" class="btn btn-ghost" id="discard-draft">Start over</button>
+  // Editing a previous submission
+  if (editingSubmissionId && !window._resumed) {
+    return `<div class="resume-banner" style="background: #E0F2FE; color: #075985; border-color: #BAE6FD;">
+      <div class="resume-banner-text">Editing a previous submission. Changes will create a new submission.</div>
+      <button type="button" class="btn btn-ghost" id="discard-draft">Start fresh</button>
+    </div>`;
+  }
+  // Resumed an in-progress draft
+  if (window._resumed) {
+    return `<div class="resume-banner">
+      <div class="resume-banner-text">Resumed your saved draft from ${formatTime(window._resumed)}.</div>
+      <button type="button" class="btn btn-ghost" id="discard-draft">Start over</button>
+    </div>`;
+  }
+  // Check for previous submissions to offer editing
+  var prev = findAllSubmissions();
+  if (prev.length === 0) return '';
+  var items = prev.map(function(s, idx) {
+    var t = s.team || {};
+    var label = [
+      LABELS.gender[t.gender] || t.gender,
+      LABELS.grade[t.grade] || t.grade,
+      LABELS.desc[t.desc] || t.desc
+    ].filter(Boolean).join(' · ');
+    var when = s._savedAt ? formatTime(s._savedAt) : '';
+    var count = (s.roster || []).length;
+    return `<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;${idx > 0 ? ' margin-top: 8px; padding-top: 8px; border-top: 1px solid #BAE6FD;' : ''}">
+      <div><strong>${label}</strong> — ${count} player${count===1?'':'s'}${when ? ' (submitted ' + when + ')' : ''}</div>
+      <button type="button" class="btn btn-ghost edit-prev-btn" data-edit-id="${escapeHtml(s._submissionId || '')}">Edit</button>
+    </div>`;
+  }).join('');
+  return `<div class="resume-banner" style="background: #E0F2FE; color: #075985; border-color: #BAE6FD;">
+    <div style="margin-bottom: 6px; font-weight: 500;">Previous submission${prev.length===1?'':'s'}:</div>
+    ${items}
   </div>`;
 }
 
@@ -865,7 +959,13 @@ function renderSubmitSuccess() {
       <div class="submit-result-icon">✓</div>
       <h1>Submitted</h1>
       <p class="subhead">${state.roster.length} evaluation${state.roster.length===1?'':'s'} sent to the committee.</p>
-      <button type="button" class="btn" id="start-new">Start a new team</button>
+      <p style="color: var(--text-2); font-size: 13px; margin: 0 0 20px; line-height: 1.5;">
+        Your submission has been saved in this browser. You can edit it later using the link in your confirmation email, or by returning to this page.
+      </p>
+      <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+        <button type="button" class="btn btn-primary" id="edit-submitted">Edit this submission</button>
+        <button type="button" class="btn" id="start-new">Start a new team</button>
+      </div>
     </div>
   `;
 }
@@ -1008,10 +1108,47 @@ function attachStepHandlers() {
   if (startNew) startNew.onclick = () => {
     state = DEFAULT_STATE();
     submitResult = null;
+    editingSubmissionId = null;
     window._resumed = null;
     render();
     window.scrollTo(0, 0);
   };
+
+  // Edit just-submitted evaluation
+  const editSubmitted = document.getElementById('edit-submitted');
+  if (editSubmitted) editSubmitted.onclick = () => {
+    if (editingSubmissionId) {
+      var saved = loadSubmission(editingSubmissionId);
+      if (saved) {
+        state = {...DEFAULT_STATE(), ...saved, step: 1, submittedAt: null};
+        submitResult = null;
+        render();
+        window.scrollTo(0, 0);
+        return;
+      }
+    }
+    // Fallback: just reset to step 1 with current state
+    state.step = 1;
+    state.submittedAt = null;
+    submitResult = null;
+    render();
+    window.scrollTo(0, 0);
+  };
+
+  // Edit previous submissions (from banner)
+  document.querySelectorAll('.edit-prev-btn').forEach(function(btn) {
+    btn.onclick = function() {
+      var id = btn.dataset.editId;
+      var saved = loadSubmission(id);
+      if (!saved) return;
+      editingSubmissionId = id;
+      state = {...DEFAULT_STATE(), ...saved, step: 1, submittedAt: null};
+      submitResult = null;
+      window._resumed = null;
+      render();
+      window.scrollTo(0, 0);
+    };
+  });
 }
 
 function render() {
@@ -1036,7 +1173,52 @@ function render() {
 // INIT
 // =============================================================
 function init() {
-  const draft = loadDraft();
+  // Check for ?edit= URL parameter (from confirmation email link)
+  var params = new URLSearchParams(window.location.search);
+  var editHash = params.get('edit');
+  if (editHash) {
+    // Show loading state
+    document.getElementById('content').innerHTML =
+      '<div style="text-align: center; padding: 60px 20px;">' +
+        '<div class="spinner" style="width: 22px; height: 22px; margin: 0 auto 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite;"></div>' +
+        '<p style="color: var(--text-2);">Loading your previous submission…</p>' +
+      '</div>';
+
+    // Fetch from server
+    fetch(CONFIG.WEBHOOK_URL + '?action=getSubmission&hash=' + encodeURIComponent(editHash), {
+      method: 'GET', redirect: 'follow'
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(body) {
+      if (body && body.ok && body.submission) {
+        var saved = body.submission;
+        editingSubmissionId = editHash;
+        state = {...DEFAULT_STATE(), ...saved, step: 1, submittedAt: null};
+        // Also cache locally
+        if (saved.team) saveSubmission(editHash, saved);
+        render();
+      } else {
+        // Not found on server — try localStorage fallback
+        var localSaved = findAllSubmissions().length > 0 ? findAllSubmissions()[0] : null;
+        document.getElementById('content').innerHTML =
+          '<div style="text-align: center; padding: 60px 20px;">' +
+            '<p style="color: var(--text-2); margin-bottom: 16px;">Submission not found on the server. It may have expired or the link may be invalid.</p>' +
+            '<button type="button" class="btn btn-primary" onclick="window.location.href=\'' + CONFIG.FORM_URL + '\'">Start a new submission</button>' +
+          '</div>';
+      }
+    })
+    .catch(function() {
+      document.getElementById('content').innerHTML =
+        '<div style="text-align: center; padding: 60px 20px;">' +
+          '<p style="color: var(--text-2); margin-bottom: 16px;">Could not load the submission. Check your connection and try again.</p>' +
+          '<button type="button" class="btn" onclick="location.reload()">Retry</button>' +
+        '</div>';
+    });
+    return;
+  }
+
+  // Check for in-progress draft
+  var draft = loadDraft();
   if (draft && draft.team) {
     state = {...DEFAULT_STATE(), ...draft};
     if (draft._savedAt) {
