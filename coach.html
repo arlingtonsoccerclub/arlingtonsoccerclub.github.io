@@ -1274,12 +1274,23 @@ function init() {
         // Also cache locally
         if (saved.team) saveSubmission(editHash, saved);
         render();
-      } else {
-        // Not found on server — try localStorage fallback
-        var localSaved = findAllSubmissions().length > 0 ? findAllSubmissions()[0] : null;
+      } else if (body && body.expired) {
+        // Link expired — newer submission exists
         document.getElementById('content').innerHTML =
-          '<div style="text-align: center; padding: 60px 20px;">' +
-            '<p style="color: var(--text-2); margin-bottom: 16px;">Submission not found on the server. It may have expired or the link may be invalid.</p>' +
+          '<div style="text-align: center; padding: 60px 20px; max-width: 440px; margin: 0 auto;">' +
+            '<div style="font-size: 28px; margin-bottom: 12px;">&#9888;</div>' +
+            '<h2 style="margin: 0 0 8px; font-size: 18px;">This link has expired</h2>' +
+            '<p style="color: var(--text-2); margin: 0 0 16px; font-size: 14px; line-height: 1.5;">A newer submission has been made, so this edit link is no longer active. Please check your email for the latest edit link.</p>' +
+            '<p style="color: var(--text-2); margin: 0 0 20px; font-size: 13px;">If you need help, contact <a href="mailto:mclarkelauer@arlingtonsoccerclub.org" style="color: var(--accent);">mclarkelauer@arlingtonsoccerclub.org</a></p>' +
+            '<button type="button" class="btn btn-primary" onclick="window.location.href=\'' + CONFIG.FORM_URL + '\'">Start a new submission</button>' +
+          '</div>';
+      } else {
+        // Not found
+        document.getElementById('content').innerHTML =
+          '<div style="text-align: center; padding: 60px 20px; max-width: 440px; margin: 0 auto;">' +
+            '<h2 style="margin: 0 0 8px; font-size: 18px;">Submission not found</h2>' +
+            '<p style="color: var(--text-2); margin: 0 0 16px; font-size: 14px; line-height: 1.5;">This link may be invalid. Please check your email for the correct edit link.</p>' +
+            '<p style="color: var(--text-2); margin: 0 0 20px; font-size: 13px;">If you need help, contact <a href="mailto:mclarkelauer@arlingtonsoccerclub.org" style="color: var(--accent);">mclarkelauer@arlingtonsoccerclub.org</a></p>' +
             '<button type="button" class="btn btn-primary" onclick="window.location.href=\'' + CONFIG.FORM_URL + '\'">Start a new submission</button>' +
           '</div>';
       }
