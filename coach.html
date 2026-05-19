@@ -881,6 +881,16 @@ function renderReview() {
     <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Players</div>
     ${state.roster.map((p, i) => renderReviewCard(p, i)).join('')}
 
+    <div style="margin-top: 20px; padding: 16px; border: 1px dashed var(--border); border-radius: var(--radius);">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Add more players</div>
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <input type="text" id="add-first-name" placeholder="First name" style="flex: 1; min-width: 100px; padding: 8px 10px; font-family: inherit; font-size: 14px; border: 1px solid var(--border); border-radius: 6px;" />
+        <input type="text" id="add-last-name" placeholder="Last name" style="flex: 1; min-width: 100px; padding: 8px 10px; font-family: inherit; font-size: 14px; border: 1px solid var(--border); border-radius: 6px;" />
+        <button type="button" class="btn btn-primary" id="review-add-player" style="white-space: nowrap;">+ Add</button>
+      </div>
+      <div id="add-player-msg" style="font-size: 12px; margin-top: 4px;"></div>
+    </div>
+
     ${submitResult && submitResult.error ? `
       <div style="margin-top: 16px; padding: 12px 14px; background: #FEE2E2; color: #991B1B; border-radius: var(--radius); font-size: 13px;">
         Submission failed: ${escapeHtml(submitResult.error)}<br>
@@ -987,8 +997,13 @@ function renderNav() {
     left = `<button type="button" class="btn btn-ghost" id="nav-back">← Roster</button>`;
     let buttons = '';
     if (idx > 0) buttons += `<button type="button" class="btn" id="prev-player">← Previous</button>`;
-    if (idx < total - 1) {
-      buttons += `<button type="button" class="btn btn-primary" id="next-player">Next →</button>`;
+    // Find next unevaluated player (after current)
+    let nextUnevaluated = -1;
+    for (let j = 0; j < total; j++) {
+      if (j !== idx && !isEvalComplete(j)) { nextUnevaluated = j; break; }
+    }
+    if (nextUnevaluated >= 0) {
+      buttons += `<button type="button" class="btn btn-primary" id="next-unevaluated">Next unevaluated →</button>`;
     } else {
       buttons += `<button type="button" class="btn btn-primary" id="finish-evals">Review →</button>`;
     }
@@ -1014,8 +1029,21 @@ function renderNav() {
   };
   const prev = document.getElementById('prev-player');
   if (prev) prev.onclick = () => { state.currentPlayer--; render(); window.scrollTo(0, 0); };
-  const next = document.getElementById('next-player');
-  if (next) next.onclick = () => { state.currentPlayer++; render(); window.scrollTo(0, 0); };
+  const nextUn = document.getElementById('next-unevaluated');
+  if (nextUn) nextUn.onclick = () => {
+    // Find next unevaluated player
+    var total = state.roster.length;
+    for (var j = 0; j < total; j++) {
+      if (j !== state.currentPlayer && !isEvalComplete(j)) {
+        state.currentPlayer = j;
+        render();
+        window.scrollTo(0, 0);
+        return;
+      }
+    }
+    // All done — go to review
+    state.step = 4; render(); window.scrollTo(0, 0);
+  };
   const fin = document.getElementById('finish-evals');
   if (fin) fin.onclick = () => { state.step = 4; render(); window.scrollTo(0, 0); };
 }
@@ -1102,6 +1130,35 @@ function attachStepHandlers() {
     });
     const submit = document.getElementById('submit-all');
     if (submit) submit.onclick = submitEvaluations;
+
+    // Add player from review page
+    const reviewAddBtn = document.getElementById('review-add-player');
+    if (reviewAddBtn) {
+      function doAddFromReview() {
+        var fn = document.getElementById('add-first-name');
+        var ln = document.getElementById('add-last-name');
+        var msg = document.getElementById('add-player-msg');
+        var firstName = (fn ? fn.value.trim() : '');
+        var lastName = (ln ? ln.value.trim() : '');
+        if (!firstName || !lastName) {
+          if (msg) { msg.textContent = 'Both names are required.'; msg.style.color = '#B91C1C'; }
+          return;
+        }
+        state.roster.push({ firstName: firstName, lastName: lastName });
+        scheduleAutosave();
+        if (fn) fn.value = '';
+        if (ln) ln.value = '';
+        if (msg) { msg.textContent = firstName + ' ' + lastName + ' added. Click their name to evaluate.'; msg.style.color = '#059669'; }
+        // Re-render to show the new player card
+        render();
+      }
+      reviewAddBtn.onclick = doAddFromReview;
+      // Enter key in inputs
+      var addFn = document.getElementById('add-first-name');
+      var addLn = document.getElementById('add-last-name');
+      if (addFn) addFn.onkeydown = function(e) { if (e.key === 'Enter') { e.preventDefault(); doAddFromReview(); } };
+      if (addLn) addLn.onkeydown = function(e) { if (e.key === 'Enter') { e.preventDefault(); doAddFromReview(); } };
+    }
   }
 
   const startNew = document.getElementById('start-new');
