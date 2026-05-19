@@ -1121,7 +1121,8 @@ function attachStepHandlers() {
       var saved = loadSubmission(editingSubmissionId);
       if (saved) {
         if (saved.evaluations && !saved.evals) saved.evals = saved.evaluations;
-        state = {...DEFAULT_STATE(), ...saved, step: 1, submittedAt: null};
+        var re = {}; Object.keys(saved.evals || {}).forEach(function(k) { re[parseInt(k)] = saved.evals[k]; }); saved.evals = re;
+        state = {...DEFAULT_STATE(), ...saved, step: 4, submittedAt: null};
         submitResult = null;
         render();
         window.scrollTo(0, 0);
@@ -1143,8 +1144,9 @@ function attachStepHandlers() {
       var saved = loadSubmission(id);
       if (!saved) return;
       if (saved.evaluations && !saved.evals) saved.evals = saved.evaluations;
+      var re = {}; Object.keys(saved.evals || {}).forEach(function(k) { re[parseInt(k)] = saved.evals[k]; }); saved.evals = re;
       editingSubmissionId = id;
-      state = {...DEFAULT_STATE(), ...saved, step: 1, submittedAt: null};
+      state = {...DEFAULT_STATE(), ...saved, step: 4, submittedAt: null};
       submitResult = null;
       window._resumed = null;
       render();
@@ -1199,7 +1201,13 @@ function init() {
           saved.evals = saved.evaluations;
         }
         editingSubmissionId = editHash;
-        state = {...DEFAULT_STATE(), ...saved, step: 1, submittedAt: null};
+        // Ensure evals are keyed numerically for getEval(i) compatibility
+        var remappedEvals = {};
+        var evalsObj = saved.evals || {};
+        Object.keys(evalsObj).forEach(function(k) { remappedEvals[parseInt(k)] = evalsObj[k]; });
+        saved.evals = remappedEvals;
+        // Start on review page (step 4) so coach sees their submission first
+        state = {...DEFAULT_STATE(), ...saved, step: 4, submittedAt: null};
         // Also cache locally
         if (saved.team) saveSubmission(editHash, saved);
         render();
