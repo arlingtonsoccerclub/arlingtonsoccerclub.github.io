@@ -990,7 +990,11 @@ function renderNav() {
     right = `<div class="right"><button type="button" class="btn btn-primary" id="nav-next" ${teamValid()?'':'disabled'}>Continue to roster →</button></div>`;
   } else if (step === 2) {
     left = `<button type="button" class="btn" id="nav-back">← Back</button>`;
-    right = `<div class="right"><button type="button" class="btn btn-primary" id="nav-next" ${rosterValid()?'':'disabled'}>Start evaluations →</button></div>`;
+    const allEvalsComplete = rosterValid() && state.roster.every((_, i) => isEvalComplete(i));
+    right = `<div class="right">${allEvalsComplete
+      ? '<button type="button" class="btn btn-primary" id="skip-to-review">Review →</button>'
+      : `<button type="button" class="btn btn-primary" id="nav-next" ${rosterValid()?'':'disabled'}>Start evaluations →</button>`
+    }</div>`;
   } else if (step === 3) {
     const idx = state.currentPlayer;
     const total = state.roster.length;
@@ -1027,6 +1031,8 @@ function renderNav() {
     state.step++;
     render();
   };
+  const skipReview = document.getElementById('skip-to-review');
+  if (skipReview) skipReview.onclick = () => { state.step = 4; render(); window.scrollTo(0, 0); };
   const prev = document.getElementById('prev-player');
   if (prev) prev.onclick = () => { state.currentPlayer--; render(); window.scrollTo(0, 0); };
   const nextUn = document.getElementById('next-unevaluated');
